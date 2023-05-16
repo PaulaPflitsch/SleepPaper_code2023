@@ -1,1 +1,4 @@
 # Author: Kumaresh Krishnan
+
+
+## experiment_info.py needs to be in the same folder as all the data files. It needs to be run first all the other scripts depend on it.

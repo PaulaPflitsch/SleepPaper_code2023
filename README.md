@@ -2,7 +2,7 @@
 Analysis Code accompanying the paper on sleep deprivation and modality-based behaviors in larval zebrafish
 
 
-Sleep_analysis
+## Sleep_analysis
 First run "LocomotionAnalyses_SingleGroups_SD" in the folder called Sleep_deprivation.
 Use the csv files to create plots with "SD_plot_standard_error"
 

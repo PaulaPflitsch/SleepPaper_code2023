@@ -317,28 +317,31 @@ def plotHistogram(experiment, num_bins, prob=False):
 
         x_range = range(data_ib_1.shape[0])
 
+        raw_mult = np.tile(mult[np.newaxis, :, :], (raw_ib_1.shape[0], 1, 1))
+        normalizer = raw_ib_1.sum(axis=2)
+        raw_ibi_1 = (raw_ib_1 * raw_mult).sum(axis=2) / normalizer
+
+        raw_mult = np.tile(mult[np.newaxis, :, :], (raw_ib_2.shape[0], 1, 1))
+        normalizer = raw_ib_2.sum(axis=2)
+        raw_ibi_2 = (raw_ib_2 * raw_mult).sum(axis=2) / normalizer
+
         f, ax = plt.subplots()
 
+        '''
         sem_1 = np.sqrt(
             np.sum(data_ib_1 * (mult - np.reshape(np.sum(data_ib_1 * mult, axis=1), (-1, 1))) ** 2, axis=1)) / np.sqrt(
             num_bins)
         sem_2 = np.sqrt(
             np.sum(data_ib_2 * (mult - np.reshape(np.sum(data_ib_2 * mult, axis=1), (-1, 1))) ** 2, axis=1)) / np.sqrt(
             num_bins)
+        '''
+        sem_1 = sem(raw_ibi_1, axis=0, nan_policy='omit')
+        sem_2 = sem(raw_ibi_2, axis=0, nan_policy='omit')
 
         ax.errorbar(np.array(range(data_ib_1.shape[0])), np.sum(data_ib_1 * mult, axis=1), yerr=sem_1,marker='o', markersize=2.0,
                label='control', color='black')
         ax.errorbar(np.array(range(data_ib_2.shape[0])), np.sum(data_ib_2 * mult, axis=1), yerr=sem_2,marker='o', markersize=2.0,
                label='light', color='red')
-
-        raw_mult = np.tile(mult[np.newaxis, :,:], (raw_ib_1.shape[0],1,1))
-        normalizer = raw_ib_1.sum(axis=2)
-        raw_ibi_1 = (raw_ib_1*raw_mult).sum(axis=2) / normalizer
-
-        raw_mult = np.tile(mult[np.newaxis, :,:], (raw_ib_2.shape[0],1,1))
-        normalizer = raw_ib_2.sum(axis=2)
-        raw_ibi_2 = (raw_ib_2 * raw_mult).sum(axis=2) / normalizer
-
 
         for i in x_range:
             x_1 = [i] * raw_ibi_1.shape[0]

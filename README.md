@@ -9,13 +9,14 @@ Author: William Joo\
 
 
 ## OMR_analysis
-Analyses performance, bout rate, interbout interval, reaction time and calculates statistics.\
+Analyses performance, bout rate, interbout interval, and reaction time and calculates statistics.\
 Author: Kumaresh Krishnan
 
 ## Cortisol_Luminescence
-Plots measured internal cortisol levels after different treatments.
+Plots measured internal cortisol levels after different treatments.\
+Author: Paula Pflitsch, Hanna Zwaka
 
 ## Avoidance_analysis
-Calculates the preference index and speed changes in the odor avoidance essay.\
-Author: Kristian Herrera
+Calculates the preference index, speed changes, and bout rate differences in the odor avoidance essay.\
+Author: Kristian Herrera, Nadine Oury, Paula Pflitsch
 

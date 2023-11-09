@@ -1,5 +1,5 @@
 %For statistics, replace PI_post with PIcontrol_post for the control data
-[PI_post,PI_mean_post,PI_SE_post] = findPIs(AllFish2,617);%changed center point to be correct 
+[PIcontrol_post,PI_mean_post,PI_SE_post] = findPIs(AllFish2,617);%changed center point to be correct 
 figure
 hold on
 bar(1,PI_mean_post,'FaceColor',[0.6,0.6,0.6]);
@@ -33,9 +33,10 @@ plot(mean(MeanAngles),'LineWidth',2,'Color',[0,0,0])
 for i = 1:size(AllFish2,2)
     plot(MeanAngles,'Color',[0.6,0.6,0.6])
 end
+
 %9.5 cm/570 pixels, 60 pixels/cm
 %For statistics, replace fishSpeedDiff with fishSpeedDiffC for the control data
-[lSE, rSE, fishLeft, fishRight, fishSpeedDiff, meanSpeed, meanLeft, meanRight, r] = Nadine_Speed(AllFish2,2);
+[lSE, rSE, fishLeft, fishRight, fishSpeedDiffC, meanSpeed, meanLeft, meanRight, r] = Nadine_Speed(AllFish2,2);
 
 
 meanSpeedDiffC = mean(fishSpeedDiffC,'omitnan');
@@ -44,14 +45,19 @@ y = [meanSpeedDiffC, meanSpeedDiff];
 figure 
 hold on
 bar(y);
+%boxplot([meanSpeedDiffC,meanSpeedDiff])
 diffSEC = std(fishSpeedDiffC,'omitnan')/sqrt(length(fishSpeedDiffC));
 errorbar(1, meanSpeedDiffC,diffSEC, 'ok');
 diffSE = std(fishSpeedDiff,'omitnan')/sqrt(length(fishSpeedDiff));
 errorbar(2, meanSpeedDiff,diffSE, 'ok');
-scatter(ones(1,size(fishSpeedDiffC,2)),fishSpeedDiffC,20,[0,0,0])
-scatter(2*ones(1,size(fishSpeedDiff,2)),fishSpeedDiff,20,[0,0,0])
-%axis([0 3 -2 4]);
+scatter(ones(1,size(fishSpeedDiffC,2)),fishSpeedDiffC,20,[0,0,0],'jitter','on', 'jitterAmount',0.05)
+scatter(2*ones(1,size(fishSpeedDiff,2)),fishSpeedDiff,20,[0,0,0],'jitter','on', 'jitterAmount',0.05)
+axis([0 3 -2 2.5]);
+
 pspeed = ranksum(fishSpeedDiffC, fishSpeedDiff);
+%two sided independent t-test
+[h,p,ci,stats] = ttest2(fishSpeedDiffC,fishSpeedDiff);
+
 %y = [meanLeft meanRight];
 %figure 
 %hold on
@@ -66,6 +72,8 @@ pspeed = ranksum(fishSpeedDiffC, fishSpeedDiff);
 %rightP = ranksum(controlRight, fishRight);
 
 p = ranksum(PIcontrol_post, PI_post);
+%two sided independent t-test
+[h,p,ci,stats] = ttest2(PIcontrol_post,PI_post);
 
 % figure 
 % hold on

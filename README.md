@@ -10,7 +10,7 @@ Author: William Joo, Paula Pflitsch
 
 ## OMR_analysis
 Analyses performance, bout rate, interbout interval, and reaction time and calculates statistics.\
-Author: Kumaresh Krishnan
+Author: Kumaresh Krishnan, Paula Pflitsch
 
 ## Cortisol_Luminescence
 Plots measured internal cortisol levels after different treatments.\

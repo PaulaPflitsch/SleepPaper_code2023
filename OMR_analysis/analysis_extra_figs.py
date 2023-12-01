@@ -209,7 +209,7 @@ def plotWrong(experiment, prob=False):
 
     ax.bar(1.1, np.nanmean(data_2), \
         yerr=sem(data_2, nan_policy='omit'), width=0.08, \
-        color='orange', capsize=0.5, alpha=0.7, label='sleep deprived')
+        color='orange', capsize=0.5, alpha=0.7, label='melatonin')
 
     x_1 = [1] * data_1.shape[0]
     x_2 = [1.1] * data_2.shape[0]
@@ -257,7 +257,7 @@ def plotDist(experiment, prob=False):
 
     ax.bar(1.1, np.nanmean(data_2), \
         yerr=sem(data_2, nan_policy='omit'), width=0.08, \
-        color='orange', capsize=0.5, alpha=0.7, label='sleep deprived')
+        color='orange', capsize=0.5, alpha=0.7, label='melatonin')
 
     x_1 = [1] * data_1.shape[0]
     x_2 = [1.1] * data_2.shape[0]
@@ -304,8 +304,8 @@ def plotReact(experiment, prob=False):
 
     f, ax = plt.subplots()
 
-    ax.errorbar(data_1.ravel(), perf_1.ravel(), linestyle='', xerr=sem_1, yerr=psem_1, label='control', color='grey', elinewidth = 0.2, capsize=1,marker='o', markersize = 3)
-    ax.errorbar(data_2.ravel(), perf_2.ravel(),linestyle='', xerr=sem_2, yerr=psem_2, label='sleep deprived', color='orange', elinewidth = 0.2, capsize=1, marker='o' ,markersize =3 )
+    ax.errorbar(data_1.ravel(), perf_1.ravel(), linestyle='', xerr=sem_1, yerr=psem_1, label='control', color='black', elinewidth = 0.2,marker='o', markersize = 3)
+    ax.errorbar(data_2.ravel(), perf_2.ravel(),linestyle='', xerr=sem_2, yerr=psem_2, label='melatonin', color='orange', elinewidth = 0.2, marker='o' ,markersize =3 )
     
     ax.set_xlabel(f'Reaction time')
     ax.set_ylabel(f'Performance')

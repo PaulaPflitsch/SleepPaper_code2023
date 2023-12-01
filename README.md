@@ -9,7 +9,7 @@ Author: William Joo, Paula Pflitsch
 
 
 ## OMR_analysis
-Analyses performance, bout rate, interbout interval, and reaction time and calculates statistics.\
+Computes and plots performance, bout rate, interbout interval, reaction time, number of wrong turns, and distance covered and calculates statistics.\
 Author: Kumaresh Krishnan, Paula Pflitsch
 
 ## Cortisol_Luminescence

@@ -24,6 +24,8 @@ import scikit_posthocs as sp
 from statsmodels.stats.multicomp import pairwise_tukeyhsd
 from xlsxwriter import Workbook
 
+from dfply import *
+
 
 def makeDf(data_1, data_2, stimuli, rename):
 
@@ -41,26 +43,28 @@ def makeDf(data_1, data_2, stimuli, rename):
         data_1 = (data_1[:,:half] + data_1[:,half:-1]) / 2.0
         data_2 = (data_2[:,:half] + data_2[:,half:-1]) / 2.0
 
-    
+
     stacked = np.concatenate((data_1, data_2), axis=0)
     col_names = [str(i) for i in range(stacked.shape[1])]
 
     df_temp = pd.DataFrame(stacked, columns=col_names)
     df_temp['Group'] = np.concatenate(([1]*data_1.shape[0], [2]*data_2.shape[0]))
     df_temp['ID'] = np.concatenate((np.arange(data_1.shape[0]), np.arange(data_2.shape[0])))
-    
-    df_data = df_temp.melt(id_vars=['Group', 'ID'], value_vars=col_names, \
+
+    df_data = df_temp.melt(id_vars=['Group', 'ID'], value_vars=col_names,
         var_name='Stimulus', value_name=rename)
 
-    # Paula: add new_ID column to identify fish based on stimulus value (indicating that the same fish has values for all stimuli)
-    fish_list = range(0, 32)
+    #Paula: add new_ID column to identify fish based on stimulus value (indicating that the same fish has values for all stimuli)
+    fish_list = range(0,64)
     print(len(fish_list))
     print(len(df_data))
     n = 4
     repeated_list = []
     for _ in range(n):
         repeated_list.extend(fish_list)
-    df_data["New_ID"] = repeated_list
+    #print(repeated_list)
+    df_data["New_ID"]=repeated_list
+    #print(df_data)
 
     return df_data
 
@@ -74,7 +78,6 @@ def totalBout(dpath, stimuli):
 
     df_data = makeDf(data_1, data_2, stimuli, 'Frequency')
 
-    # save df_data in an excel sheet
     save_dir = path.Path() / '..' / experiment
     doc_name = save_dir / 'df_data.xlsx'
     df_data.to_excel(doc_name, index=False)
@@ -86,17 +89,21 @@ def totalBout(dpath, stimuli):
 
     sns.boxplot(x='Stimulus', y='Frequency', hue='Group', data=df_data, palette='Set3')
 
-    # two way repeated measures ANOVA for within-within samples
-    results = pg.rm_anova(dv='Frequency', within=['Stimulus','Group'], subject='ID', data=df_data, detailed=True)
+    # repeated measures ANOVA only for within fish controls, e.g. before and after treatment
+    #results = pg.rm_anova(dv='Frequency', within=['Stimulus','Group'], subject='ID', data=df_data, detailed=True)
+    #save_dir = path.Path() / '..' / experiment
+    #doc_name = save_dir / 'bouts_stats.xlsx'
+    #results.to_excel(doc_name, index=False)
+
+
+    #mixed ANOVA (between and within for tests between different subjects who underwent several timepoints/condiitons)
+    results_mix = pg.mixed_anova(data=df_data, dv='Frequency', between='Group', within='Stimulus', subject='New_ID')
     save_dir = path.Path() / '..' / experiment
-    doc_name = save_dir / 'bouts_stats.xlsx'
-    results.to_excel(doc_name, index=False)
-
-    # mixed ANOVA (between and within for tests between different subjects who underwent several timepoints/condiitons)
-    #results_mix = pg.mixed_anova(data=df_data, dv='Frequency', between='Group', within='Stimulus', subject='New_ID')
+    doc_name = save_dir / 'bouts_stats_mixed_anova.xlsx'
+    results_mix.to_excel(doc_name, index=False)
 
 
-    ## ad hoc t-test for paired samples
+    ## post hoc t-test for paired samples
     #print(df_data)
     #a = df_data.query('Group==1')['Frequency']
     #b = df_data.query('Group==2')['Frequency']
@@ -153,21 +160,22 @@ def correctness(dpath, stimuli):
     sns.boxplot(x='Stimulus', y='Correctness', hue='Group', data=df_data, palette='Set3')
     #plt.show()
 
-    # two way repeated measures ANOVA for within-within samples
-    results = pg.rm_anova(dv='Correctness', within=['Stimulus','Group'], subject='ID', data=df_data, detailed=True)
-    # anova between stimuli, between groups and between stimuli * groups
-
-    doc_name = save_dir / 'correct_stats.xlsx'
-    results.to_excel(doc_name, index=False)
+    # anova between stimuli, between groups and between stimuli * groups for within subjects
+    #results = pg.rm_anova(dv='Correctness', within=['Stimulus','Group'], subject='ID', data=df_data, detailed=True)
+    #doc_name = save_dir / 'correct_stats.xlsx'
+    #results.to_excel(doc_name, index=False)
 
     # mixed ANOVA (between and within for tests between different subjects who underwent several timepoints/condiitons)
-    #results_mix = pg.mixed_anova(data=df_data, dv='Correctness', between='Group', within='Stimulus', subject='New_ID')
+    results_mix = pg.mixed_anova(data=df_data, dv='Correctness', between='Group', within='Stimulus', subject='New_ID')
+    save_dir = path.Path() / '..' / experiment
+    doc_name = save_dir / 'correct_stats_mixed_anova.xlsx'
+    results_mix.to_excel(doc_name, index=False)
 
 
     # # ad hoc t-test for paired samples between groups
-    #a = df_data.query('Group==1')['Correctness']
+    a = df_data.query('Group==1')['Correctness']
     # print("a",a)
-    #b = df_data.query('Group==2')['Correctness']
+    b = df_data.query('Group==2')['Correctness']
     # print("b",b)
     # t_test = ss.ttest_ind(a,b)
     # print(t_test)
@@ -245,23 +253,21 @@ def time(dpath):
 
     data_1_mean = np.nanmean(data_1, axis=(1, 2))
     data_2_mean = np.nanmean(data_2, axis=(1, 2))
+    #data_1_mean = np.nanmean(data_1)
+    #data_2_mean = np.nanmean(data_2)
 
-    # if the two groups of paired samples have an unequal sample size: drop the non-matching rows
-    print(len(data_1_mean))
-    print(len(data_2_mean))
-    # initializing K
-    #K = 2
-    # using len() + list slicing
-    # remove last K elements
-    #data_1_mean = data_1_mean[: len(data_1_mean) - K]
-    # printing result
-    #print("The list after removing last K elements : " + str(data_1_mean))
 
-    # post hoc t-test for paired samples
+
+    # post hoc t-test for independent samples or related samples
+    #print(df_data)
     a = data_1_mean
     b = data_2_mean
+    # for independent samples
+    #t_test = ss.ttest_ind(a, b)
+    # for related samples
     t_test = ss.ttest_rel(a, b)
-    print("Time t-test",t_test)
+    print(t_test)
+
 
     df_time = pd.DataFrame(data=t_test)
 
@@ -290,14 +296,18 @@ def IBI(dpath, stimuli):
 
     sns.boxplot(x='Stimulus', y='IBI', hue='Group', data=df_data, palette='Set3')
 
-    #two way repeated measures ANOVA for within-within samples
-    results = pg.rm_anova(dv='IBI', within=['Stimulus', 'Group'], subject='ID', data=df_data, detailed=True)
-    save_dir = path.Path() / '..' / experiment
-    doc_name = save_dir / 'IBI_stats.xlsx'
-    results.to_excel(doc_name, index=False)
+    # for paired samples
+    #results = pg.rm_anova(dv='IBI', within=['Stimulus', 'Group'], subject='ID', data=df_data, detailed=True)
+    #save_dir = path.Path() / '..' / experiment
+    #doc_name = save_dir / 'IBI_stats.xlsx'
+    #results.to_excel(doc_name, index=False)
 
     # mixed ANOVA (between and within for tests between different subjects who underwent several timepoints/condiitons)
-    #results_mix = pg.mixed_anova(data=df_data, dv='IBI', between='Group', within='Stimulus', subject='New_ID')
+    results_mix = pg.mixed_anova(data=df_data, dv='IBI', between='Group', within='Stimulus', subject='New_ID')
+    save_dir = path.Path() / '..' / experiment
+    doc_name = save_dir / 'IBI_stats_mixed_anova.xlsx'
+    results_mix.to_excel(doc_name, index=False)
+
 
     # Paula: posthoc t-test with scikit-posthoc
     # print("df_data",df_data.head())
@@ -337,16 +347,79 @@ def IBI(dpath, stimuli):
     return 0
 
 
+def exploration(dpath):
+    tmp = hdf.loadmat(dpath / 'data_extra_fishwise.mat')
+    data_1 = tmp['raw_dist_1']
+    print(data_1)
+    data_2 = tmp['raw_dist_2']
+
+    data_1_mean = np.nanmean(data_1, axis = 1)
+    print("mean",data_1_mean)
+    data_2_mean = np.nanmean(data_2, axis = 1)
+
+
+    # post hoc t-test for independent samples or related samples
+    # print(df_data)
+    a = data_1_mean
+    b = data_2_mean
+    # for independent samples
+    t_test = ss.ttest_ind(a,b)
+    # for related samples
+    #t_test = ss.ttest_rel(a, b)
+    print(t_test)
+
+    df_time = pd.DataFrame(data=t_test)
+
+    save_dir = path.Path() / '..' / experiment
+    doc_name = save_dir / 'exploration_stats.xlsx'
+    df_time.to_excel(doc_name, index=False)
+
+    return 0
+
+def wrong_turns(dpath):
+    tmp = hdf.loadmat(dpath / 'data_extra_fishwise.mat')
+    data_1 = tmp['raw_wrong_1']
+    print(data_1)
+    data_2 = tmp['raw_wrong_2']
+
+    data_1_mean = np.nanmean(data_1, axis = 1)
+    print("mean",data_1_mean)
+    data_2_mean = np.nanmean(data_2, axis = 1)
+
+
+    # post hoc t-test for independent samples or related samples
+    # print(df_data)
+    a = data_1_mean
+    b = data_2_mean
+    # for independent samples
+    t_test = ss.ttest_ind(a,b)
+    # for related samples
+    #t_test = ss.ttest_rel(a, b)
+    print(t_test)
+
+    df_time = pd.DataFrame(data=t_test)
+
+    save_dir = path.Path() / '..' / experiment
+    doc_name = save_dir / 'wrong_turns_stats.xlsx'
+    df_time.to_excel(doc_name, index=False)
+
+    return 0
+
+
+
+
 if __name__ == '__main__':
 
-    experiment = '12_08_2022_5ugml_cortisol'
+    experiment = 'd7_07_07_2021'
     stimuli = 8
 
     dpath = path.Path() / '..' / experiment
 
-    totalBout(dpath, stimuli)
-    correctness(dpath, stimuli)
-    time(dpath)
-    IBI(dpath, stimuli)
+    #totalBout(dpath, stimuli)
+    #correctness(dpath, stimuli)
+    #time(dpath)
+    #IBI(dpath, stimuli)
+    #exploration(dpath)
+    wrong_turns(dpath)
 
     sys.exit()

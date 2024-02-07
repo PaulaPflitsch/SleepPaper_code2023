@@ -58,7 +58,8 @@ def extractData(experiment, root):
     days = info['days']
     fish = info['fish']
     trials = info['trials']
-    stimuli = 2#info['stimuli']
+    stimuli = 8 #info['stimuli'] #2
+    print(stimuli)
     
     total_fish = np.sum(fish)
     
@@ -75,14 +76,14 @@ def extractData(experiment, root):
 
             for t in range(trials):
 
-                #for s in range(stimuli):
-                for s_idx, s in enumerate([3,7]): # Only doing 100% coherence
+                for s_idx in range(stimuli): #all stimuli
+                #for s_idx, s in enumerate([3,7]): # Only doing 100% coherence
 
                     folder = root / f'{day}_fish{f+1:03d}' / 'raw_data' / f'trial{t:03d}.dat'
                     tmp = open(folder, 'rb')
                     raw_data = pickle.load(tmp)
                         
-                    react, wrong, dist, perf = extraInfo(raw_data, s)
+                    react, wrong, dist, perf = extraInfo(raw_data, s_idx)
                     data_react[fish_ctr, t, s_idx] = react
                     data_wrong[fish_ctr, t, s_idx] = wrong
                     data_dist[fish_ctr, t, s_idx] = dist
@@ -105,8 +106,25 @@ def processData(experiment, data_react, data_wrong, data_dist, data_perf):
     group_1 = info['control']
     group_2 = info['sleep']
 
-    tot_dist_1 = np.nansum(data_dist[group_1], axis=2) # Sum across stimuli, average across trials
-    tot_dist_2 = np.nansum(data_dist[group_2], axis=2) # Sum across stimuli, average across trials
+    # sum across all stimuli
+    #tot_dist_1 = np.nansum(data_dist[group_1], axis=2) # Sum across stimuli, average across trials
+    #tot_dist_2 = np.nansum(data_dist[group_2], axis=2) # Sum across stimuli, average across trials
+
+    # for stimulus 0% only
+
+    tot_dist_1a= data_dist[group_1][:,:,0]
+    tot_dist_1b = data_dist[group_1][:, :,4]
+
+    tot_dist_1 = np.nansum(np.concatenate((tot_dist_1a[:,:,None], tot_dist_1b[:,:,None]), axis=2), axis=2)
+
+    tot_dist_2a = data_dist[group_2][:, :, 0]
+    tot_dist_2b = data_dist[group_2][:, :, 4]
+
+    tot_dist_2 = np.nansum(np.concatenate((tot_dist_2a[:,:,None], tot_dist_2b[:,:,None]), axis=2), axis=2)
+
+    #else:
+        #tot_dist_1 = np.nansum(data_dist[group_1], axis=2)
+        #tot_dist_2 = np.nansum(data_dist[group_2], axis=2)
 
     avg_dist_1 = np.nanmean(tot_dist_1, axis=1)
     avg_dist_2 = np.nanmean(tot_dist_2, axis=1)

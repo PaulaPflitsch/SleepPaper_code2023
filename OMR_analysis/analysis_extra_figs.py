@@ -126,14 +126,26 @@ def processData(experiment, data_react, data_wrong, data_dist, data_perf):
         #tot_dist_1 = np.nansum(data_dist[group_1], axis=2)
         #tot_dist_2 = np.nansum(data_dist[group_2], axis=2)
 
+    # error rate for 100% coherence
+    tot_wrong_1a = data_wrong[group_1][:, :, 3]
+    tot_wrong_1b = data_wrong[group_1][:, :, 7]
+
+    tot_wrong_1 = np.nansum(np.concatenate((tot_wrong_1a[:, :, None], tot_wrong_1b[:, :, None]), axis=2), axis=2)
+
+    tot_wrong_2a = data_wrong[group_2][:, :, 3]
+    tot_wrong_2b = data_wrong[group_2][:, :, 7]
+
+    tot_wrong_2 = np.nansum(np.concatenate((tot_wrong_2a[:, :, None], tot_wrong_2b[:, :, None]), axis=2), axis=2)
+
+    #averages
     avg_dist_1 = np.nanmean(tot_dist_1, axis=1)
     avg_dist_2 = np.nanmean(tot_dist_2, axis=1)
 
     sem_dist_1 = sem(tot_dist_1, nan_policy='omit')
     sem_dist_2 = sem(tot_dist_2, nan_policy='omit')
 
-    tot_wrong_1 = np.nansum(data_wrong[group_1], axis=2) # All wrong turns
-    tot_wrong_2 = np.nansum(data_wrong[group_2], axis=2) # All wrong turns
+    #tot_wrong_1 = np.nansum(data_wrong[group_1], axis=2) # All wrong turns
+    #tot_wrong_2 = np.nansum(data_wrong[group_2], axis=2) # All wrong turns
 
     avg_wrong_1 = np.nanmean(tot_wrong_1, axis=1)
     avg_wrong_2 = np.nanmean(tot_wrong_2, axis=1)
@@ -227,14 +239,14 @@ def plotWrong(experiment, prob=False):
 
     ax.bar(1.1, np.nanmean(data_2), \
         yerr=sem(data_2, nan_policy='omit'), width=0.08, \
-        color='orange', capsize=0.5, alpha=0.7, label='melatonin')
+        color='green', capsize=0.5, alpha=0.7, label='light pulses')
 
     x_1 = [1] * data_1.shape[0]
     x_2 = [1.1] * data_2.shape[0]
 
     dots = ax.scatter(x_1, data_1, color = 'grey',  alpha = 0.4)
     jitter_dots(dots)
-    dots = ax.scatter(x_2, data_2, color = 'orange', alpha = 0.4)
+    dots = ax.scatter(x_2, data_2, color = 'green', alpha = 0.4)
     jitter_dots(dots)
     
     ax.set_xlabel(f'Group')
@@ -275,14 +287,14 @@ def plotDist(experiment, prob=False):
 
     ax.bar(1.1, np.nanmean(data_2), \
         yerr=sem(data_2, nan_policy='omit'), width=0.08, \
-        color='orange', capsize=0.5, alpha=0.7, label='melatonin')
+        color='green', capsize=0.5, alpha=0.7, label='light pulses')
 
     x_1 = [1] * data_1.shape[0]
     x_2 = [1.1] * data_2.shape[0]
 
     dots = ax.scatter(x_1, data_1, color = 'grey',  alpha = 0.4)
     jitter_dots(dots)
-    dots = ax.scatter(x_2, data_2, color = 'orange', alpha = 0.4)
+    dots = ax.scatter(x_2, data_2, color = 'green', alpha = 0.4)
     jitter_dots(dots)
     
     ax.set_xlabel(f'Group')
@@ -323,7 +335,7 @@ def plotReact(experiment, prob=False):
     f, ax = plt.subplots()
 
     ax.errorbar(data_1.ravel(), perf_1.ravel(), linestyle='', xerr=sem_1, yerr=psem_1, label='control', color='black', elinewidth = 0.2,marker='o', markersize = 3)
-    ax.errorbar(data_2.ravel(), perf_2.ravel(),linestyle='', xerr=sem_2, yerr=psem_2, label='melatonin', color='orange', elinewidth = 0.2, marker='o' ,markersize =3 )
+    ax.errorbar(data_2.ravel(), perf_2.ravel(),linestyle='', xerr=sem_2, yerr=psem_2, label='light pulses', color='green', elinewidth = 0.2, marker='o' ,markersize =3 )
     
     ax.set_xlabel(f'Reaction time')
     ax.set_ylabel(f'Performance')
@@ -344,7 +356,7 @@ def plotReact(experiment, prob=False):
 
 if __name__ == '__main__':
 
-    experiment = 'd7_12_22_2021_0,1µM_Melatonin'
+    experiment = 'd8_07_02_2021'
 
     main(experiment)
     plotWrong(experiment)

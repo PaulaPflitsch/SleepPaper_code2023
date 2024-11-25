@@ -8,7 +8,7 @@ expName = 'LarvalSD_pilot_210121';
 
 b = 1; % binlength (in minutes) to convert pixel data to seconds-with-motion (see below)
 threshold = 2; % threshold how many pixels represents a real movement, rather than noise in the data?
-NumFish = 96; % the number of fish in the box
+NumFish = 48 %96; % the number of fish in the box
 %FrameRate = 30; % NEW NOTE: Now derive this from actual timestamp data below
 Interval = 60; % the number of seconds over which we sum the bouts
 
@@ -20,7 +20,7 @@ cd(PathName);
 fopen(filename_motion);             
 clear data96
 data96 = fread(fopen(filename_motion), inf, 'uint16=>uint16', 'b'); % returns one column with fish1 t1, fish2 t1, ...., fish96, fish1 t2, fish2 t2...
-data96 = reshape(data96, 96, []);  %96 % number of rows m NumFish x number of columns n [] of data
+data96 = reshape(data96, 48, []);  %96 % number of rows m NumFish x number of columns n [] of data
 data96 = rot90(data96, 3); % rotate matrix counterclockw by k*90 degree
 data96 = fliplr(data96); % flip matrix left-right (vertical axis)
 d96 = double(data96);
@@ -43,8 +43,8 @@ toc
 %% 4. Automatically find frame # for day/night transitions
 
 % MANUALLY INPUT dates first according to timestamp file:
-day0 = '5/3/2023'; % start date, no "0" in date!
-day1 = '5/4/2023'; % Lights on at 9am (for ctrl); Run ends 11pm this day
+day0 = '10/28/2024'; % start date, no "0" in date!
+day1 = '10/29/2024'; % Lights on at 9am (for ctrl); Run ends 11pm this day
 %day2 = '21/4/2021'; % Run stopped this day
 %day3 = '2/15/2019'; 
 
@@ -53,7 +53,7 @@ day1 = '5/4/2023'; % Lights on at 9am (for ctrl); Run ends 11pm this day
 % changed/renamed as desired. 
 
 % beginning of first night 
-frame_night1 = strfind(timeArrayCell, (strcat(day0,'11:30:00 PM')));
+frame_night1 = strfind(timeArrayCell, (strcat(day0,'11:00:00 PM')));
 frame_night1 = find(not(cellfun('isempty', frame_night1)));
 size_frame_night1 = size(frame_night1,1);
 frame_night1 = frame_night1(1,1);
@@ -65,17 +65,19 @@ size_frame_day1 = size(frame_day1,1);
 frame_day1 = frame_day1(1,1);
 
 % beginning of lights off rebound test phase 
-frame_testphase = strfind(timeArrayCell, (strcat(day1,'12:00:00 PM')));
-frame_testphase = find(not(cellfun('isempty', frame_testphase)));
-frame_testphase = frame_testphase(1,1);
+%frame_testphase = strfind(timeArrayCell, (strcat(day1,'12:00:00 PM')));
+%frame_testphase = find(not(cellfun('isempty', frame_testphase)));
+%size_frame_testphase = size(frame_testphase,1);
+%frame_testphase = frame_testphase(1,1);
 
 % frame for 3pm, to split 9-12pm vs 12-3pm
-%frame_3pm = strfind(timeArrayCell, (strcat(day1,'3:00:00 PM')));
-%frame_3pm = find(not(cellfun('isempty', frame_3pm)));
-%frame_3pm = frame_3pm(1,1);
+frame_day0 = strfind(timeArrayCell, (strcat(day0,'6:00:00 PM')));
+frame_day0 = find(not(cellfun('isempty', frame_day0)));
+size_frame_day0 = size(frame_day0,1);
+frame_day0 = frame_day0(1,1);
 
 % Time near the end of the experiment: for now use night 2
-frame_night2 = strfind(timeArrayCell, (strcat(day1,'11:00:00 PM')));
+frame_night2 = strfind(timeArrayCell, (strcat(day1,'3:00:00 PM')));
 frame_night2 = find(not(cellfun('isempty', frame_night2)));
 size_frame_night2 = size(frame_night2,1);
 frame_night2 = frame_night2(1,1);
@@ -83,8 +85,8 @@ frame_night2 = frame_night2(1,1);
 
 % Mean framerate calculated based on desired time interval
 % 210820 test dataset: looks like framerate is closer to 13-15??
-frame_mean = (frame_day1-frame_night1)/(24*60*60);
-% Set "official" framerate to nearest 0.5
+frame_mean = (frame_night2-frame_day0)/(24*60*60); %seconds in a day
+% Set "official"  to nearest 0.5
 framerate = round(frame_mean);
 csvwrite('framerate.csv', framerate); %print this in case you need it later
 
@@ -92,9 +94,11 @@ csvwrite('framerate.csv', framerate); %print this in case you need it later
 %% 5. Clip data for consistent plotting using timestamp/frame:
 
 % Using time interval from above: beginning of night until end of experiment
-d96_clip = d96(frame_night1:frame_night2,:); % last one originally ":"
+%d96_clip = d96(frame_night1:frestrame_night2,:); % last one originally ":"
 %d96_clip = d96(frame_testphase:frame_night2,:);
-%% 6. Bin activity/rest
+%d96_clip = d96(frame_night1:frame_night2,:);
+d96_clip = d96(frame_day0:frame_night2,:);
+%% 6. Bin activity/
 % According to Prober 2006 and Rihel 2010.
 % Activity = seconds with motion, 
 % Convert pixel data to seconds-with-motion data
@@ -155,7 +159,7 @@ a_clip = fct_BinActivity(d96_clip,b,threshold,framerate);
 %ctrl = [4  5  7  9  10  11  12  13  14  15  17  18  20  21  22  23  24  25  26 30  31  32  33  34  35  38  39  40  41  42  43  46  47  49  50  51  52  53  54  55   56  57  58  59  60  62  63  64  65  67  69  70  71  72  73  74  77  78  79  80  81  82  83  85   87  88  89  90  91  94  95  96]
 
 % 20230503 LightSD continuous box8
-ctrl = [2  3  4  5  6  7  8  9  10  11  12  13  14  15  16  17  18  19  21  22  23  24  25  26  27  29  30  31  32  34  35  36  37  38  39  40  41  42  43  44  45  46  47  48  49  50  51  52  53  54  55  56  57  58  59  60  61  62  63  64  65  66  67  68  69  70  72  73  74  75  77 78  79  80  81  82  83  84  89  90  92  93  94  95  96]
+%ctrl = [2  3  4  5  6  7  8  9  10  11  12  13  14  15  16  17  18  19  21  22  23  24  25  26  27  29  30  31  32  34  35  36  37  38  39  40  41  42  43  44  45  46  47  48  49  50  51  52  53  54  55  56  57  58  59  60  61  62  63  64  65  66  67  68  69  70  72  73  74  75  77 78  79  80  81  82  83  84  89  90  92  93  94  95  96]
 
 
 %230410 LightSD control box8
@@ -186,11 +190,34 @@ ctrl = [2  3  4  5  6  7  8  9  10  11  12  13  14  15  16  17  18  19  21  22  
 %24 well plate LightSD rebound continuous
 %ctrl = [1:24]
 
+
+% LIN: repeat sleep deprivation
+%control
+%ctrl = [1:96];
+%continous
+%ctrl = [1:96]
+
+%LIN sleep rebound
+%control
+%ctrl = [10 11 12 13 14 15 18 19 20 21 22 23 26 27 28 29 30 31 32 34 35 36 37 38 39 42 43 44 45 46 47 50 51 52 53 54 55 58 59 60 61 62 63 66 67 68 69 70 71 74 75 76 77 78 79 82 83 84 85 86 87 89 90 91 92 93 94 95]
+%continuous
+%ctrl = [10 11 12 13 14 15 18 19 20 21 22 23 26 27 28 29 30 31 32 34 35 36 37 38 39 42 43 44 45 46 47 50 51 52 53 54 55 58 59 60 61 62 63 66 67 68 69 70 71 74 75 76 77 78 79 81 82 83 84 85 86 87 89 90 91 92 93 94 95]
+
+%LIN Sleep deprivation rebound 05/11/2024
+%box1: control
+%ctrl = [1  2  3  4  5  6  7  8  9  10  11  12  13  14  15  16  17  18  19  20  21 22  23  24  25  26  27  28  29  30  31  32  33  34  35  36  37  38  39 40 41 42 43 44 45 46 47 48]
+%box2: continuous
+%ctrl = [1  2  3  4   6  7  8  9  10  11  12  13  14  15  16  17  18  19  20  21 22  23  24  25  26  27  28  29  30  31  32  33  34  35  36  37  38  39 40 41 42 43 44 45 46 47 48]
+%box3:control
+%ctrl = [1  2  3  4  5  6  7  8  9  10  11  12  13  14  15  16  17  19  20  21 22  23  24  25  26  27  28  29  30  31  32  33  34  35  36  37  38  39 40 42 45 46 48]
+%box4: continuous
+%ctrl = [1  2  3  4  5  6  7  8  9  10  11  12  13  14  15  16  17  18  20  21 22  23  24  26  27  28  29  30  31  32  33  34  35  36  37  38  39 41 42 45 46 47 48]
+
 % 211201 LightSD continuous box 8
-%ctrl = [1:96]; %96
+ctrl = [1:48]; %96
 %ctrl(ctrl==4) = [];
 %ctrl(ctrl==13) = [];
-allWells = [1:96]; %96
+allWells = [1:48]; %96
 
 % Save the fish #s in case you want to reanalyze later
 fish_ids = fopen('fish_ids_group_1.txt','w');
@@ -205,6 +232,10 @@ geno = {'ctrl'; ctrl};
 %Overall entire run info:
 fct_crNormalDistr(a_clip, expName, geno, allWells, ctrl) %change to a for whole recording time
 %fct_crNormalDistr(a, expName, geno, allWells, ctrl)
+
+%% 8.1. Save activity a into excel file for further analysis
+%filename = 'raw_activity.xlsx'
+%writematrix(a, filename,'Sheet',1)
 
 %% 9. ACTIVITY/REST PLOTS
 % this calculates:
@@ -234,7 +265,10 @@ csvwrite('output_binned_act_ctrl.csv', T_f.activity{1}); % ctrl
 
 d_night1 = d96(frame_night1:(frame_day1-1), :);
 d_day1 = d96(frame_day1:(frame_night2-1), :);
+%d_day1 = d96(frame_day1:(frame_testphase-1), :);  %for rebound
 d_testphase = d96(frame_testphase:(frame_night2-1), :);
+%d_day1 =  d96(frame_day1:(frame_testphase-1), :); 
+d_day0 = d96(frame_day0:(frame_night1-1), :); 
 
 
 %% 10a. Paula: Repeat all steps of d96 with d_night, d_day1 and d_testphase
@@ -247,6 +281,7 @@ t = 2; % threshold how many pixels represent a real movement, rather than noise
 a_night1 = fct_BinActivity(d_night1,b,threshold,framerate); % might have to change cut offs
 a_day1 = fct_BinActivity(d_day1,b,threshold,framerate);
 a_testphase = fct_BinActivity(d_testphase,b,threshold,framerate);
+a_day0 = fct_BinActivity(d_day0,b,threshold,framerate);
 
 % use function fct_crSleepPlots to get desired parameters
 % save data as csv
@@ -276,7 +311,17 @@ csvwrite('output_binned_rest_testphase.csv', T_f.rest{1});
 csvwrite('output_binned_wakeAct_testphase.csv', T_f.wakeAct{1}); 
 csvwrite('output_binned_act_testphase.csv', T_f.activity{1});
 
+a = a_day0
+f = fct_crSleepPlots(a,geno,expName);
 
+T_f = struct2table(f, 'AsArray', 1);
+csvwrite('output_binned_rest_day0.csv', T_f.rest{1}); 
+csvwrite('output_binned_wakeAct_day0.csv', T_f.wakeAct{1}); 
+csvwrite('output_binned_act_day0.csv', T_f.activity{1});
+
+
+%% Plot binary activity: sleep and non-sleep
+a_binary_matrix = fct_Binary_activity(a_clip,allWells,expName);
 
 %% 11. BIN DAY/NIGHT ACTIVITY
 %Active seconds per minute

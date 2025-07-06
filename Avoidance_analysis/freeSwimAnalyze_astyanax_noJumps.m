@@ -1,9 +1,19 @@
 clear variables %added to clear variables from previous runs, make sure there is no impact from left over variables
 [filename,pathname] = uigetfile('*.*','C:\Users\Engert\Dropbox\FreeSwimming','MultiSelect','on');
+
+disp(filename);
+disp(size(filename));
+disp(class(filename));
+
+if isequal (filename, 0)
+    error ('No file selected');
+end
+
 if iscell(filename)
-    noFiles = size(filename,2);
+    noFiles = numel(filename);
 else
     noFiles = 1;
+    filename={filename};
 end
 AllFish = {[]};
 Fno = 4;
@@ -12,13 +22,15 @@ bottom = 260;
 for i = 1:4
     Lane(i,:) = [(bottom + (i-1)*(top-bottom)/4),(260 + i*(top-bottom)/4)];
 end
-parfor file = 1:noFiles(1)%change to for if you want to trouble shoot if it is flipping values for left and right, does not seem to flip if the whole group is not from the same side
+parfor file = 1:noFiles(1) %change to for if you want to trouble shoot if it is flipping values for left and right, does not seem to flip if the whole group is not from the same side
     Fish = [];
     if ~iscellstr(filename(1,1))
-        fullname = fullfile(pathname,filename);
+        fullname = fullfile(pathname,filename{file});
+        disp(fullname)
     else
     fullnamet = fullfile(pathname,filename(file));
     fullname = fullnamet{1};
+    disp(fullname);
     end
 
         
@@ -80,6 +92,7 @@ parfor file = 1:noFiles(1)%change to for if you want to trouble shoot if it is f
     RealTime = cumsum(time)/1000;
     for f = 1:Fno
         disp(f) %prints fish number
+
         noise = filtSTD(Fish(f).data(:,3),5);
         Bouting = [0,0,0,0,0,noise > 2] > 0;
         changeBout = [0,diff(Bouting)];
@@ -88,14 +101,15 @@ parfor file = 1:noFiles(1)%change to for if you want to trouble shoot if it is f
         
         if length(Fish(f).BS) > length(Fish(f).BE)
             Fish(f).BS(end) = [];
+            
         end
         if ~isempty(Fish(f).BS)
             Fish(f).BS(end) = [];
             Fish(f).BE(end) = [];
             Fish(f).preBout_time = Fish(f).BS - 2;
             Fish(f).postBout_time = Fish(f).BE + 2;
-
-
+            
+            
             Fish(f).preBout_x = Fish(f).data(Fish(f).preBout_time,1);
             Fish(f).preBout_y = Fish(f).data(Fish(f).preBout_time,2);
             Fish(f).preBout_o = Fish(f).data(Fish(f).preBout_time,3);
@@ -152,7 +166,7 @@ parfor file = 1:noFiles(1)%change to for if you want to trouble shoot if it is f
             Fish(f).postBout_y = corrected_post_y;
 
 
-            %code test start here: Removal of long distances   
+            % Removal of long distances   
             % Redefine x and y values after the removal of wall trackings.
             corrected_x = Fish(f).preBout_x; % Start with preBout_x values
             corrected_y = Fish(f).preBout_y; % Start with preBout_y values
@@ -166,8 +180,8 @@ parfor file = 1:noFiles(1)%change to for if you want to trouble shoot if it is f
                 % Calculate the Euclidean distance from the last valid position
                 distance_to_last_valid = sqrt((corrected_x(i) - last_valid_x)^2 + (corrected_y(i) - last_valid_y)^2);
                 
-                % If the distance is greater than 250 pixels, reset the position to the last valid position
-                if distance_to_last_valid > 200
+                % If the distance is greater than 150 pixels, reset the position to the last valid position
+                if distance_to_last_valid > 150
                     corrected_x(i) = last_valid_x;
                     corrected_y(i) = last_valid_y;
                 else
@@ -192,7 +206,7 @@ parfor file = 1:noFiles(1)%change to for if you want to trouble shoot if it is f
             for i = 2:length(corrected_post_x)
                 distance_to_last_valid = sqrt((corrected_post_x(i) - last_valid_x)^2 + (corrected_post_y(i) - last_valid_y)^2);
                 
-                if distance_to_last_valid > 200
+                if distance_to_last_valid > 150
                     corrected_post_x(i) = last_valid_x;
                     corrected_post_y(i) = last_valid_y;
                 else
@@ -206,7 +220,6 @@ parfor file = 1:noFiles(1)%change to for if you want to trouble shoot if it is f
             Fish(f).postBout_y = corrected_post_y;
 
             
-
             
             % Apply the filter to keep only valid bouts based on both within-bout and between-bout criteria
             %Fish(f).preBout_x = Fish(f).data(Fish(f).preBout_time,1);

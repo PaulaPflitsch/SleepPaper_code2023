@@ -3,7 +3,7 @@
 % a) Filter out fish with low movement
 noMove = [];
 
-AllFish2_filtered = AllFish2_filtered;  % Initialize the filtered variable
+AllFish2_filtered = AllFish2;  % Initialize the filtered variable
 
 % Filter fish with low movement (more than 70% time spent with zero movement)
 for i = 1:size(AllFish2_filtered, 2)
@@ -29,6 +29,11 @@ AllFish2_filtered(noMove > 0.7) = [];  % Apply filtering to remove low movement 
 % Replace AllFish2_filtered with the filtered version (optional)
 %AllFish2_filtered = FilteredFish;
 
+%save the file: paste the path
+pathname = 'E:\Olfaction\Preference_index_cortisol\100ng_cortisol_15min';
+save(strcat(pathname,'\cortisol_AllFish_noMove.mat'),'AllFish2_filtered','-v7.3');
+
+
 %% 2) check the X and Y positions of each fish in a plot to determine whether fish have
 % been mistracked, i.e. if fluff or a part of the wall have been tracked
 % instead of the fish
@@ -38,12 +43,14 @@ AllFish2_filtered(noMove > 0.7) = [];  % Apply filtering to remove low movement 
 % left side: low relative odor concentration. right side: high relative
 % odor concentration
 
-u=6;
+u=36;
 % change fish number in brackets
-x=AllFish2_filtered(u).preBout_x; % check tracking of every single fish.
-y=AllFish2_filtered(u).preBout_y; % check tracking of every single fish
+x=AllFish2_filtered(u).postBout_x; % check tracking of every single fish.
+y=AllFish2_filtered(u).postBout_y; % check tracking of every single fish
 figure;
 plot(x,y);
+xlim([330 900]);
+ylim([260 777]);
 
 xlabel('X position');
 ylabel('Y position');
@@ -63,57 +70,61 @@ title('X and y position in the swimming lane');
 AllFish2_filtered2=AllFish2_filtered
 
 % 0mM cadaverine NEW
-%AllFish2_filtered2([1, 15,16,17,18,19,20,22,24,26,27,28,30,32]) = []; %control
-%AllFish2_filtered2([1,3,5,15,16,18,19,20,21,22,23,25,26,32,35,36,37]) = [];  %sleep deprived
+%AllFish2_filtered2([20]) = []; %control
+%AllFish2_filtered2([3,4,9,13,20,23]) = [];  %sleep deprived
 
 % 1mM cadaverine NEW
-%AllFish2_filtered2([22,23,24,25,30,31,32,33,36,37,38,39,40,41,42,43,47,48,49]) = []; %control
-%AllFish2_filtered2([26,28,29,30,33,39,40,41,42,43,44,48,49]) = [];  %sleep deprived
+%AllFish2_filtered2([6,7,14,21,22,23,28]) = []; %control
+%AllFish2_filtered2([5,15,17,18]) = [];  %sleep deprived
 
 % 2.5mM cadaverine NEW
-%AllFish2_filtered2([12,18,21,24,25,28,32,33,39,40,43,44,45,46,47]) = []; %control
-%AllFish2_filtered2([10,12,15,18,19,20,24,26,27,30,37,38,39,41,45,46,47]) = [];  %sleep deprived
+%AllFish2_filtered2([4,8,13,16,17,20,31,32,37,38,39]) = []; %control
+%AllFish2_filtered2([2,10,11,12,18,19,29,30,33,37,39]) = [];  %sleep deprived
 
 % 5mM cadaverine NEW
-%AllFish2_filtered2([22,23,25,34,35,36,37,39,41,42,44,45,46,47,49,50,51,53,54]) = []; %control
-%AllFish2_filtered2([21,22,24,26,28,29,31,32,35,36,37,38,39,40,41,42,43,44,46,47,48,49,50,51,53,57,60]) = [];  %sleep deprived
+%AllFish2_filtered2([3,5,21,26,27,33,]) = []; %control
+%AllFish2_filtered2([2,6,8,9,20,33,40,]) = [];  %sleep deprived
 
 
 % 10mM putrescine
-%AllFish2_filtered2([15,19,24,28,29,30,31,34,35,36,37,40]) = []; %control
-%AllFish2_filtered2([13,16,20,21,26,27,29,33,36,39,40]) = [];  %sleep deprived
+%AllFish2_filtered2([2,24,28,29,31,35,36,44,]) = []; %control
+%AllFish2_filtered2([13,16,19,29,36]) = [];  %sleep deprived
 
 % 100mM salt NEW
-%AllFish2_filtered2([9,12,13,14,17,20,22,29,31,33,36,39,40,41,42]) = []; %control
-%AllFish2_filtered2([11,12,15,17,20,23,26,27,28,29,30,31,34,35,38,41,43]) = [];  %sleep deprived
+%AllFish2_filtered2([1,6,9,25,28,32,33]) = []; %control
+%AllFish2_filtered2([3,4,15,18,25,26,28,29,33,]) = [];  %sleep deprived
 
-% 5 ng/ml cortisol (in 2.5mM cadaverine)
-%AllFish2_filtered2([2,4,8,11,18,28,29]) = []; %control
-%AllFish2_filtered2([1,2,3,4,8,12,14,15,20,21,26,27,30]) = [];  %cortisol treated
+% 5 ng/ml cortisol (in 2.5mM cadaverine) NEW
+%AllFish2_filtered2([4,11,18,19,30]) = []; %control
+%AllFish2_filtered2([21,31,34]) = [];  %cortisol treated
 
 % 100 ng/ml cortisol (in 2.5mM cadaverine) NEW
 %AllFish2_filtered2([30,33]) = []; %control
-%AllFish2_filtered2([10,31]) = [];  %cortisol treated
+%AllFish2_filtered2([7,31]) = [];  %cortisol treated
 
 % 5ug/ml cortisol (in 2.5mM cadaverine) NEW
-%AllFish2_filtered2([23,29,33,34,37,38,40,41,44,45,47,48,49]) = []; %control
-%AllFish2_filtered2([5,7,27,29,30,33,34,37,38]) = [];  %cortisol treated
+%AllFish2_filtered2([23,29,30,33,34,37,38,39,41,45,47,48]) = []; %control
+%AllFish2_filtered2([5,7,29,30,33,37,38,39]) = [];  %cortisol treated
 
 
 % complete starvation (in 2.5mM cadaverine)
-%AllFish2_filtered2([4]) = []; %control
+%AllFish2_filtered2([4,]) = []; %control
 %AllFish2_filtered2([]) = [];  %starved
 
 % partial starvation (in 2.5mM cadaverine)
-%AllFish2_filtered2([2,9,10,11,17,18,24,25,29,30,31,32]) = []; %control
-%AllFish2_filtered2([8,9,11,16,17,18,20,21,22,24,28,29]) = [];  %starved
+%AllFish2_filtered2([9,10,14,24,25,30,31,32]) = []; %control
+%AllFish2_filtered2([8,11,16,17,20,21,28,29,]) = [];  %starved
 
 % 100nM melatonin (in 2.5mM cadaverine) NEW
-%AllFish2_filtered2([13,16,17,18,20,21,23,27,28,31]) = []; %control
-%AllFish2_filtered2([16,17,24,26,27,29,30]) = [];  %melatonin
+%AllFish2_filtered2([12,15,]) = []; %control
+%AllFish2_filtered2([5,10,15]) = [];  %melatonin
+
+% alanine SD  NEW
+%AllFish2_filtered2([8,11,14,15,27,]) = []; %control
+AllFish2_filtered2([3,4,6,9,13,33,34,]) = [];  %SD
 
 
 %save the file: paste the path
-pathname = 'E:\Harvard_Olfaction\5ugml_cortisol_2,5mMCadaverine\morning_vs_afternoon\afternoon';
-save(strcat(pathname,'\control_filtered.mat'),'AllFish2_filtered2','-v7.3');
+pathname = 'E:\Olfaction\Preference_index_alanine\compiles';
+save(strcat(pathname,'\SD_AllFish_filtered.mat'),'AllFish2_filtered2','-v7.3');
 

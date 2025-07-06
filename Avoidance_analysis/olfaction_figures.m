@@ -10,9 +10,9 @@
 % control and comment treatment
 
 % treatment
-[PI_post,PI_mean_post,PI_SE_post] = findPIs(AllFish2_filtered,617) % 617 is the center point of the lane (pixels)
+%[PI_post,PI_mean_post,PI_SE_post] = findPIs(AllFish2_filtered,617) % 617 is the center point of the lane (pixels)
 % control 
-%[PIcontrol_post,PIcontrol_mean_post,PIcontrol_SE_post] = findPIs(AllFish2_filtered2,617) % 617 is the center point of the lane (pixels)
+[PIcontrol_post,PIcontrol_mean_post,PIcontrol_SE_post] = findPIs(AllFish2_filtered,617) % 617 is the center point of the lane (pixels)
 
 figure
 hold on
@@ -38,7 +38,7 @@ p = ranksum(PIcontrol_post, PI_post);
 disp(['ranksum: ', num2str(p)]);
 
 % Save p-value to a CSV file
-save_directory = 'E:\Olfaction\Preference_index_melatonin'; % Replace with your desired path
+save_directory = 'E:\Olfaction\Preference_index_cortisol\100ng_cortisol_15min'; % Replace with your desired path
 csv_filename = 'PI_ranksum_results.csv';
 full_csv_path = fullfile(save_directory, csv_filename);
 csvwrite(full_csv_path, p);
@@ -61,11 +61,11 @@ disp(stats);
 % control and comment treatment
 
 % treatment
-[total_boutrate, count_l, count_r, bpm_left, bpm_right,total_bout_left,total_bout_right,timeinterbout_left,timeinterbout_right,timebout_left,timebout_right,sum_timebout_left,sum_timeinterbout_left,sum_timeinterbout_right,sum_timebout_right,time_left,time_right,AllFish2,boutrate_left,boutrate_right,boutrateDiff]=Bout_Rate(AllFish2_filtered2,2) % 2: calculates the bout rate within 2 cms of the no-odor-agarose and the odor-agarose
-meanboutrateDiff = mean(boutrateDiff,'omitnan');
+%[total_boutrate, count_l, count_r, bpm_left, bpm_right,total_bout_left,total_bout_right,timeinterbout_left,timeinterbout_right,timebout_left,timebout_right,sum_timebout_left,sum_timeinterbout_left,sum_timeinterbout_right,sum_timebout_right,time_left,time_right,AllFish2,boutrate_left,boutrate_right,boutrateDiff]=Bout_Rate(AllFish2_filtered,2) % 2: calculates the bout rate within 2 cms of the no-odor-agarose and the odor-agarose
+%meanboutrateDiff = mean(boutrateDiff,'omitnan');
 % control
-%[total_boutrate, count_l, count_r, bpm_left, bpm_right,total_bout_left,total_bout_right,timeinterbout_left,timeinterbout_right,timebout_left,timebout_right,sum_timebout_left,sum_timeinterbout_left,sum_timeinterbout_right,sum_timebout_right,time_left,time_right,AllFish2,boutrate_left,boutrate_right,boutrateDiffC]=Bout_Rate(AllFish2_filtered2,2)
-%meanboutRateDiffC = mean(boutrateDiffC,'omitnan');
+[total_boutrate, count_l, count_r, bpm_left, bpm_right,total_bout_left,total_bout_right,timeinterbout_left,timeinterbout_right,timebout_left,timebout_right,sum_timebout_left,sum_timeinterbout_left,sum_timeinterbout_right,sum_timebout_right,time_left,time_right,AllFish2,boutrate_left,boutrate_right,boutrateDiffC]=Bout_Rate(AllFish2_filtered,2)
+meanboutRateDiffC = mean(boutrateDiffC,'omitnan');
 
 
 % define y axis
@@ -115,10 +115,10 @@ disp(stats);
 % load the control (filtered) and treatment (filtered) group seperately and then save them as a
 % csv file in the same directory
 
-[AllFish2_filtered2,bin_means_bout_rate_per_fish, mean_IBI_per_fish, bin_means_bout_rate, bin_means_IBI,IBIs_in_bin,bout_rates_in_bin,mean_IBI_per_fish_bin,mean_IBI_per_bin,mean_boutrate_per_bin,mean_boutrate_per_fish_bin,all_IBIs_with_postBout_x,all_bout_rates_with_postBout_x]  = binned_means_BoutRate_perFish_test2(AllFish2_filtered2, 85) % 85 bins: 1mm bins in the 8.5 cm long lane
+[AllFish2_filtered2,bin_means_bout_rate_per_fish, mean_IBI_per_fish, bin_means_bout_rate, bin_means_IBI,IBIs_in_bin,bout_rates_in_bin,mean_IBI_per_fish_bin,mean_IBI_per_bin,mean_boutrate_per_bin,mean_boutrate_per_fish_bin,all_IBIs_with_postBout_x,all_bout_rates_with_postBout_x]  = binned_means_BoutRate_perFish_test2(AllFish2_filtered, 46) % 85 bins: 1mm bins in the 8.5 cm long lane; 55 bins for a 550 pixel lane = 10 pixel/lane --> 0.166cm/bin
 
 % save file as csv, CHANGE directory
-writematrix(bout_rates_in_bin,'E:\Olfaction\Preference_index_melatonin\bout_rates_melatonin.csv');
+writematrix(bout_rates_in_bin,'E:\Olfaction\Preference_index_cortisol\100ng_cortisol_15min\bout_rates_control.csv');
 
 
 % then plot in jupyter lab python

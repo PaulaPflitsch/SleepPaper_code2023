@@ -55,9 +55,11 @@ def makeDf(data_1, data_2, stimuli, rename):
 
     return df_data
 
-def jitter_dots(dots):
+def jitter_dots(dots, base_x = None, offsets = 1):
     offsets = dots.get_offsets()
-    jittered_offsets = offsets
+    jittered_offsets = np.copy(offsets)
+    if base_x is not None:
+        jittered_offsets[:,0] = base_x
     # only jitter in the x-direction
     jittered_offsets[:, 0] += np.random.uniform(-0.05, 0.05, offsets.shape[0])
     dots.set_offsets(jittered_offsets)
@@ -191,6 +193,8 @@ def correct(top, bottom, group,experiment):
     sns.set_style('ticks')
     f, ax = plt.subplots()
 
+    offset = 0.03  # to distinguish groups more clearly
+
     ax.set_ylabel('Performance Score')
     ax.set_xlabel('Coherence')
     #ax.set_ylim(0.45,0.95)
@@ -204,13 +208,13 @@ def correct(top, bottom, group,experiment):
     ax.errorbar(np.arange(top_means.shape[0]), bottom_means, yerr=bottom_std, color='lightsteelblue', label='bottom')
 
     for i in x_range:
-        x_1 = [i] * top_perf.shape[0]
-        x_2 = [i] * bottom_perf.shape[0]
+        x_1 = np.full(top_perf.shape[0], i-offset)
+        x_2 = np.full(bottom_perf.shape[0], i+ offset)
 
         dots = ax.scatter(x_1, top_perf[:, i], color='royalblue', alpha=0.3)
-        jitter_dots(dots)
+        jitter_dots(dots, base_x=x_1 - offset)
         dots = ax.scatter(x_2, bottom_perf[:, i], color='lightsteelblue', alpha=0.3)
-        jitter_dots(dots)
+        jitter_dots(dots, base_x=x_2 + offset)
 
     ax.legend()
 
@@ -320,13 +324,6 @@ def angles(top, bottom, group, experiment):
     return
 
 
-def correlation(group):
-
-
-
-    return
-
-
 def getBouters(group, fraction, experiment):
     # Top and bottom bouters, each of size (1/fraction) * total fish
     data_file = path.Path() / '..'/experiment
@@ -373,17 +370,20 @@ def boutFrequency(top, bottom, group,experiment, num_bins, stimuli):
     ## total response bout rate as a lineplot
     x_range = range(4)
     f, ax = plt.subplots()
+
+    offset = 0.0
+
     ax.errorbar(np.arange(top_means.shape[0]), top_means, yerr=top_std, color='royalblue', label='top')
     ax.errorbar(np.arange(top_means.shape[0]), bottom_means, yerr=bottom_std, color='lightsteelblue', label='bottom')
 
     for i in x_range:
-        x_1 = [i] * top_rates.shape[0]
-        x_2 = [i] * bottom_rates.shape[0]
+        x_1 = np.full(top_rates.shape[0], i - offset)
+        x_2 = np.full(bottom_rates.shape[0], i + offset)
 
         dots = ax.scatter(x_1, top_rates[:, i], color='royalblue', alpha=0.3)
-        jitter_dots(dots)
+        jitter_dots(dots, base_x=x_1 - offset)
         dots = ax.scatter(x_2, bottom_rates[:, i], color='lightsteelblue', alpha=0.3)
-        jitter_dots(dots)
+        jitter_dots(dots, base_x=x_2 + offset)
 
     ax.legend()
     ax.set_xlabel(f'Coherence')
@@ -443,17 +443,17 @@ def boutFrequency(top, bottom, group,experiment, num_bins, stimuli):
 
     # Save in excel sheet
     # Create a Pandas Excel writer using XlsxWriter as the engine.
-    #writer = pd.ExcelWriter(save_dir / 'boutRates_posthoc_tukeyhsd.xlsx', engine='xlsxwriter')
+    writer = pd.ExcelWriter(save_dir / 'boutRates_posthoc_tukeyhsd.xlsx', engine='xlsxwriter')
 
     # Write each dataframe to a different worksheet.
-    #df_correct_0.to_excel(writer, sheet_name='Stimuli 0%')
-    #df_correct_1.to_excel(writer, sheet_name='Stimuli 25%')
-    #df_correct_2.to_excel(writer, sheet_name='Stimuli 50%')
-    #df_correct_3.to_excel(writer, sheet_name='Stimuli 100%')
+    df_correct_0.to_excel(writer, sheet_name='Stimuli 0%')
+    df_correct_1.to_excel(writer, sheet_name='Stimuli 25%')
+    df_correct_2.to_excel(writer, sheet_name='Stimuli 50%')
+    df_correct_3.to_excel(writer, sheet_name='Stimuli 100%')
     # df3.to_excel(writer, sheet_name='Sheet3')
 
     # Close the Pandas Excel writer and output the Excel file.
-    #writer.close()
+    writer.close()
 
     return
 

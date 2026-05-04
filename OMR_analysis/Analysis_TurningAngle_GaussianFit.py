@@ -24,8 +24,8 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import curve_fit
 from scipy.stats import mannwhitneyu, ttest_ind, sem
+from scipy.stats import skewnorm
 from itertools import combinations
-
 
 
 def headingAngle(raw_data, stimulus, num_bins):
@@ -389,6 +389,28 @@ Depends on: processAngles() output saved via hdf5storage, scipy, numpy, matplotl
 # c = centre, a = amplitude, w = width (sigma)
 # ---------------------------------------------------------------------------
 
+def skewed_gaussian(x, ctr, amp, wid, alpha):
+    """
+    Skewed Gaussian.
+    alpha > 0 = right skew (tail to the right)
+    alpha < 0 = left skew  (tail to the left)
+    """
+    return amp * skewnorm.pdf(x, alpha, loc=ctr, scale=wid) * wid * np.sqrt(2 * np.pi)
+
+def gaussian_single(x, ctr, amp, wid):
+    return amp * np.exp(-((x - ctr) / wid) ** 2)
+
+def gaussian_2_skewed(x, c1, a1, w1, c2, a2, w2, alpha2):
+    """Forward peak (symmetric) + right peak (skewed right)"""
+    return gaussian_single(x, c1, a1, w1) + skewed_gaussian(x, c2, a2, w2, alpha2)
+
+def gaussian_3_skewed(x, c1, a1, w1, c2, a2, w2, c3, a3, w3, alpha3):
+    """Left peak (skewed left) + forward peak (symmetric) + right peak (skewed right)"""
+    return (gaussian_single(x, c1, a1, w1)
+            + gaussian_single(x, c2, a2, w2)
+            + skewed_gaussian(x, c3, a3, w3, alpha3))
+
+'''
 def gaussian_single(x, ctr, amp, wid):
     return amp * np.exp(-((x - ctr) / wid) ** 2)
 
@@ -401,41 +423,43 @@ def gaussian_3(x, c1, a1, w1, c2, a2, w2, c3, a3, w3):
     return (gaussian_single(x, c1, a1, w1)
             + gaussian_single(x, c2, a2, w2)
             + gaussian_single(x, c3, a3, w3))
-
-
+'''
 # ---------------------------------------------------------------------------
 # fitGaussians
 # ---------------------------------------------------------------------------
 
 def fitGaussians(angles, y_data, n_gaussians=2, p0=None):
     """
-    Fit n_gaussians Gaussians to a 1-D histogram.
+    Fit Gaussians to a 1-D histogram.
+    - Forward peak (centre ~0°): always symmetric Gaussian
+    - Right peak: skewed Gaussian (alpha > 0 = right skew)
 
-    p0 format for 2 Gaussians: [c1, a1, w1, c2, a2, w2]
-    p0 format for 3 Gaussians: [c1, a1, w1, c2, a2, w2, c3, a3, w3]
-
-    If p0 is None a heuristic default is used — but you should always
-    pass explicit p0 values from your __main__ block via p0_per_stimulus.
+    p0 format for 2 Gaussians: [c1, a1, w1,  c2, a2, w2, alpha2]
+                                 forward      right+skew
+    p0 format for 3 Gaussians: [c1, a1, w1,  c2, a2, w2,  c3, a3, w3, alpha3]
+                                 left         forward       right+skew
     """
-    # Only use internal heuristic if caller did not supply p0
     if p0 is None:
         amp_est = float(np.nanmax(y_data))
         if n_gaussians == 2:
-            # forward peak + right (correct) peak
             p0 = [0, amp_est * 0.8, 20,
-                  45, amp_est * 0.5, 25]
+                  45, amp_est * 0.5, 25, 3]  # alpha=3: moderate right skew
         else:
-            # left (indirect) + forward + right (correct)
             p0 = [-40, amp_est * 0.3, 20,
                   0, amp_est * 0.8, 20,
-                  40, amp_est * 0.3, 20]
+                  40, amp_est * 0.3, 20, 3]  # alpha=3: moderate right skew
 
-    func = gaussian_2 if n_gaussians == 2 else gaussian_3
+    func = gaussian_2_skewed if n_gaussians == 2 else gaussian_3_skewed
 
-    # Bounds: centres in [-180, 180], amplitudes >= 0, widths >= 1
-    n_params = 6 if n_gaussians == 2 else 9
-    lower = [-180, 0, 1] * n_gaussians
-    upper = [180, np.inf, 180] * n_gaussians
+    # Bounds:
+    # For 2G: [c1, a1, w1,  c2, a2, w2, alpha2]
+    # For 3G: [c1, a1, w1,  c2, a2, w2,  c3, a3, w3, alpha3]
+    if n_gaussians == 2:
+        lower = [-180, 0, 1, -180, 0, 1, -20]
+        upper = [180, np.inf, 180, 180, np.inf, 180, 20]
+    else:
+        lower = [-180, 0, 1, -180, 0, 1, -180, 0, 1, -20]
+        upper = [180, np.inf, 180, 180, np.inf, 180, 180, np.inf, 180, 20]
 
     try:
         popt, pcov = curve_fit(
@@ -458,19 +482,51 @@ def fitGaussians(angles, y_data, n_gaussians=2, p0=None):
 
 def extractPeaks(popt, n_gaussians=2):
     """
-    Returns list of dicts [{'centre', 'amplitude', 'width'}, ...] sorted
-    left to right by centre.
+    Extract peak positions. For the skewed right peak, find the
+    actual maximum numerically rather than using the centre parameter.
+    Returns list of dicts sorted left to right by centre.
     """
-    peaks = []
-    for i in range(n_gaussians):
-        peaks.append({
-            'centre': popt[i * 3],
-            'amplitude': popt[i * 3 + 1],
-            'width': popt[i * 3 + 2],
-        })
+    x_search = np.linspace(-180, 180, 10000)
+
+    if n_gaussians == 2:
+        # popt: [c1, a1, w1,  c2, a2, w2, alpha2]
+        c1, a1, w1 = popt[0], popt[1], popt[2]
+        c2, a2, w2, alpha2 = popt[3], popt[4], popt[5], popt[6]
+
+        # Forward peak: centre is the parameter
+        fwd_centre = c1
+
+        # Right peak: find actual maximum of skewed Gaussian
+        y_right = skewed_gaussian(x_search, c2, a2, w2, alpha2)
+        right_centre = x_search[np.argmax(y_right)]
+
+        peaks = [
+            {'centre': fwd_centre,   'amplitude': a1, 'width': w1, 'alpha': 0},
+            {'centre': right_centre, 'amplitude': a2, 'width': w2, 'alpha': alpha2},
+        ]
+
+    else:
+        # popt: [c1, a1, w1,  c2, a2, w2,  c3, a3, w3, alpha3]
+        c1, a1, w1 = popt[0], popt[1], popt[2]
+        c2, a2, w2 = popt[3], popt[4], popt[5]
+        c3, a3, w3, alpha3 = popt[6], popt[7], popt[8], popt[9]
+
+        # Left and forward peaks: symmetric, trust the centre
+        left_centre = c1
+        fwd_centre  = c2
+
+        # Right peak: find actual maximum numerically
+        y_right = skewed_gaussian(x_search, c3, a3, w3, alpha3)
+        right_centre = x_search[np.argmax(y_right)]
+
+        peaks = [
+            {'centre': left_centre,  'amplitude': a1, 'width': w1, 'alpha': 0},
+            {'centre': fwd_centre,   'amplitude': a2, 'width': w2, 'alpha': 0},
+            {'centre': right_centre, 'amplitude': a3, 'width': w3, 'alpha': alpha3},
+        ]
+
     peaks.sort(key=lambda p: p['centre'])
     return peaks
-
 
 # ---------------------------------------------------------------------------
 # mirrorRaw  — apply once before any fitting
@@ -493,6 +549,17 @@ def mirrorRaw(raw):
                 + raw[:, :, half:half + half, :]) / 2.0
     return mirrored  # (n_fish, n_trials, half, n_bins)
 
+def peak_from_curve(fit_curve, angles, search_min=10, search_max=180):
+    """
+    Find the angle of the maximum of the fitted curve
+    within [search_min, search_max] degrees.
+    More robust than trusting the Gaussian centre parameter.
+    """
+    mask = (angles >= search_min) & (angles <= search_max)
+    if not np.any(mask):
+        return np.nan
+    idx = np.argmax(fit_curve[mask])
+    return angles[mask][idx]
 
 # ---------------------------------------------------------------------------
 # fit_per_fish
@@ -534,13 +601,34 @@ def fit_per_fish(raw_mirrored, angles, n_gaussians_per_stimulus, p0_per_stimulus
                 if np.all(np.isnan(y)):
                     continue
                 popt, _, _, success = fitGaussians(angles, y, n_g, p0)
-                if not success:
-                    continue
                 peaks = extractPeaks(popt, n_g)
                 if peak_index == 'all':
                     trial_peaks.append(np.mean([p['centre'] for p in peaks]))
                 elif isinstance(peak_index, int) and peak_index < len(peaks):
                     trial_peaks.append(peaks[peak_index]['centre'])
+                '''
+                popt, _, fit_curve, success = fitGaussians(angles, y, n_g, p0)
+                if not success:
+                    continue
+                if peak_index == 'all':
+                    # mean of: empirical right peak + left peak from Gaussian centre
+                    peaks = extractPeaks(popt, n_g)
+                    right = peak_from_curve(fit_curve, angles, search_min=10, search_max=180)
+                    left = peaks[0]['centre'] if len(peaks) > 0 else np.nan
+                    trial_peaks.append(np.nanmean([left, right]))
+                elif isinstance(peak_index, int):
+                    if peak_index == len(extractPeaks(popt, n_g)) - 1:
+                        # Last (rightmost) peak — use curve maximum instead of centre
+                        trial_peaks.append(
+                            peak_from_curve(fit_curve, angles, search_min=10, search_max=180)
+                        )
+                    else:
+                        # Left or forward peaks — symmetric, trust the centre
+                        peaks = extractPeaks(popt, n_g)
+                        if peak_index < len(peaks):
+                            trial_peaks.append(peaks[peak_index]['centre'])
+                '''
+
 
             if len(trial_peaks) > 0:
                 peak_matrix[f, s] = np.nanmean(trial_peaks)
@@ -704,6 +792,7 @@ def runGaussianAnalysis(experiment, num_bins, n_gaussians_per_stimulus=None,
         ax.set_ylabel(ylabel)
         ax.set_title(f'{stim_name} — {n_gaussians_per_stimulus}G fit, Bin: 5°')
         ax.legend(fontsize=8)
+        ax.set_ylim(0,0.35)
         sns.despine(top=True, right=True)
         fig.savefig(save_dir / f'fig_{s}_{stim_name}_gaussfit.pdf', bbox_inches='tight')
         plt.close(fig)
@@ -889,7 +978,7 @@ def plotPeakComparison(fish_peaks, stats_df, experiment, num_bins,
 # =============================================================================
 
 if __name__ == '__main__':
-    experiment = 'd8_07_08_2021'
+    experiment = 'd7_07_07_2021'
     num_bins = 72
     n_gaussians_per_stimulus = [3, 2, 2, 2]
 
@@ -899,22 +988,22 @@ if __name__ == '__main__':
     plotHistogram(experiment, num_bins, True)
 
     # -- Gaussian analysis ---------------------------------------------------
-    # 9 values per stimulus: [c1, a1, w1,   c2, a2, w2,   c3, a3, w3]
-    #                         left/indirect  forward       right/correct
+    # 9 values per stimulus: [c1, a1, w1,   c2, a2, w2,   c3, a3, w3, alpha]
+    #                         left/indirect  forward       right/correct   skewness
     # Adjust centres and amplitudes to match what you see in your plots.
 
     p0_control = [
-        [-30, 0.03, 10, 0, 0.25, 20, 30, 0.03, 10],  # stimulus 0 (lowest coherence)
-        [ 0, 0.25, 20, 25, 0.05, 10],  # stimulus 1
-        [ 0, 0.20, 12, 30, 0.05, 15],  # stimulus 2
-        [ 0, 0.15, 10, 50, 0.10, 10],  # stimulus 3 (highest coherence)
+        [-20, 0.03, 10, 0, 0.25, 20, 30, 0.03, 10, 0],  # stimulus 0 (lowest coherence)
+        [ 0, 0.25, 10, 25, 0.04, 50, 3],  # stimulus 1
+        [ 0, 0.20, 10, 25, 0.05, 60, 3],  # stimulus 2
+        [ 0, 0.15, 10, 45, 0.06, 60, 3],  # stimulus 3 (highest coherence)
     ]
 
     p0_sleep = [
-        [-30, 0.03, 10, 0, 0.25, 20, 40, 0.03, 10],  # stimulus 0
-        [ 0, 0.25, 20, 50, 0.05, 10],  # stimulus 1
-        [ 0, 0.20, 10, 50, 0.05, 10],  # stimulus 2
-        [ 0, 0.15, 10, 60, 0.10, 10],  # stimulus 3
+        [-30, 0.03, 10, 0, 0.25, 20, 30, 0.03, 10, 0],  # stimulus 0
+        [ 0, 0.25, 10, 50, 0.03, 70, 3],  # stimulus 1
+        [ 0, 0.20, 10, 60, 0.05, 70, 3],  # stimulus 2
+        [ 0, 0.10, 10, 65, 0.04, 50, 3],  # stimulus 3
     ]
 
     peak_df, stats_df, fish_peaks = runGaussianAnalysis(

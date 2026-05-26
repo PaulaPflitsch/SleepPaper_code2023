@@ -216,7 +216,7 @@ def plotHistogram(experiment, num_bins, prob=False):
         f, ax = plt.subplots()
 
         ax.plot(angles, data_1[stimulus], label='control', color='black')
-        ax.plot(angles, data_2[stimulus], label='light pulses morning', color='green')
+        ax.plot(angles, data_2[stimulus], label='light pulses morning', color='blue')
 
         plt.fill_between(angles, \
                          data_1[stimulus] - sem_1[stimulus], \
@@ -226,7 +226,7 @@ def plotHistogram(experiment, num_bins, prob=False):
         plt.fill_between(angles, \
                          data_2[stimulus] - sem_2[stimulus], \
                          data_2[stimulus] + sem_2[stimulus], \
-                         color='green', alpha=0.5)
+                         color='blue', alpha=0.5)
 
         ax.set_xlabel(f'$\\Delta$ Angle (°)')
         if prob == 1:
@@ -269,7 +269,7 @@ def plotHistogram(experiment, num_bins, prob=False):
         f, ax = plt.subplots()
 
         ax.plot(angles, data_1[stimulus], label='control', color='black')
-        ax.plot(angles, data_2[stimulus], label='light pulses morning', color='green')
+        ax.plot(angles, data_2[stimulus], label='light pulses morning', color='blue')
 
         plt.fill_between(angles, \
                          data_1[stimulus] - sem_1[stimulus], \
@@ -279,7 +279,7 @@ def plotHistogram(experiment, num_bins, prob=False):
         plt.fill_between(angles, \
                          data_2[stimulus] - sem_2[stimulus], \
                          data_2[stimulus] + sem_2[stimulus], \
-                         color='green', alpha=0.5)
+                         color='blue', alpha=0.5)
 
         ax.set_xlabel(f'$\\Delta$ Angle (°)')
         if prob == 1:
@@ -586,26 +586,45 @@ def fit_per_fish(raw_mirrored, angles, n_gaussians_per_stimulus, p0_per_stimulus
     peak_matrix : (n_fish, n_stimuli) — NaN where fitting failed for all trials
     """
     n_fish, n_trials, n_stim, _ = raw_mirrored.shape
-    peak_matrix = np.full((n_fish, n_stim), np.nan)
+    peak_matrix = np.full((n_fish, n_stim), np.nan)  # peak positions
+    amplitude_matrix = np.full((n_fish, n_stim), np.nan)  # peak amplitudes
 
     for f in range(n_fish):
         for s in range(n_stim):
-            n_g = n_gaussians_per_stimulus[s]  # stimulus-specific
+            n_g = n_gaussians_per_stimulus[s]
             p0 = (p0_per_stimulus[s]
                   if (p0_per_stimulus is not None and s < len(p0_per_stimulus))
                   else None)
             trial_peaks = []
+            trial_amps = []
 
             for t in range(n_trials):
                 y = raw_mirrored[f, t, s, :]
                 if np.all(np.isnan(y)):
                     continue
-                popt, _, _, success = fitGaussians(angles, y, n_g, p0)
+                popt, _, fit_curve, success = fitGaussians(angles, y, n_g, p0)
+                if not success:
+                    continue
                 peaks = extractPeaks(popt, n_g)
+
                 if peak_index == 'all':
                     trial_peaks.append(np.mean([p['centre'] for p in peaks]))
+                    trial_amps.append(np.mean([p['amplitude'] for p in peaks]))
                 elif isinstance(peak_index, int) and peak_index < len(peaks):
                     trial_peaks.append(peaks[peak_index]['centre'])
+                    trial_amps.append(peaks[peak_index]['amplitude'])
+                else:
+                    # Always collect rightmost peak amplitude separately
+                    rightmost = max(peaks, key=lambda p: p['centre'])
+                    trial_peaks.append(rightmost['centre'])
+                    trial_amps.append(rightmost['amplitude'])
+
+            if len(trial_peaks) > 0:
+                peak_matrix[f, s] = np.nanmean(trial_peaks)
+                amplitude_matrix[f, s] = np.nanmean(trial_amps)
+
+
+
                 '''
                 popt, _, fit_curve, success = fitGaussians(angles, y, n_g, p0)
                 if not success:
@@ -628,13 +647,7 @@ def fit_per_fish(raw_mirrored, angles, n_gaussians_per_stimulus, p0_per_stimulus
                         if peak_index < len(peaks):
                             trial_peaks.append(peaks[peak_index]['centre'])
                 '''
-
-
-            if len(trial_peaks) > 0:
-                peak_matrix[f, s] = np.nanmean(trial_peaks)
-
-    return peak_matrix  # (n_fish, n_stimuli)
-
+    return peak_matrix, amplitude_matrix  # both (n_fish, n_stimuli)
 
 # ---------------------------------------------------------------------------
 # runGaussianAnalysis  — top-level entry point
@@ -770,13 +783,13 @@ def runGaussianAnalysis(experiment, num_bins, n_gaussians_per_stimulus=None,
                         mean_g1[s] - sem_g1[s],
                         mean_g1[s] + sem_g1[s],
                         color='grey', alpha=0.35)
-        ax.plot(angles, mean_g2[s], color='red', label=group2_label, linewidth=1.2)
+        ax.plot(angles, mean_g2[s], color='blue', label=group2_label, linewidth=1.2)
         ax.fill_between(angles,
                         mean_g2[s] - sem_g2[s],
                         mean_g2[s] + sem_g2[s],
-                        color='red', alpha=0.25)
+                        color='blue', alpha=0.25)
 
-        for r, col in [(r1, 'black'), (r2, 'red')]:
+        for r, col in [(r1, 'black'), (r2, 'blue')]:
             if r['success']:
                 ax.plot(angles, r['fit'], color=col, linestyle='--',
                         linewidth=1.5, label=f'fit {col}')
@@ -816,10 +829,11 @@ def runGaussianAnalysis(experiment, num_bins, n_gaussians_per_stimulus=None,
     #    Group-specific p0 passed explicitly
     # ------------------------------------------------------------------
     print(f"\n[2] Per-fish fitting ({group1_label})...")
-    peaks_g1 = fit_per_fish(raw_g1_fit, angles, n_gaussians_per_stimulus, p0_group1, peak_index)
+    peaks_g1, amps_g1 = fit_per_fish(raw_g1_fit, angles, n_gaussians_per_stimulus, p0_group1, peak_index)
 
     print(f"\n[2] Per-fish fitting ({group2_label})...")
-    peaks_g2 = fit_per_fish(raw_g2_fit, angles, n_gaussians_per_stimulus, p0_group2, peak_index)
+    peaks_g2, amps_g2 = fit_per_fish(raw_g2_fit, angles, n_gaussians_per_stimulus, p0_group2, peak_index)
+    #print(amps_g2)
 
     # ------------------------------------------------------------------
     # 5. Statistics: Mann-Whitney U + Welch's t-test per stimulus
@@ -832,35 +846,59 @@ def runGaussianAnalysis(experiment, num_bins, n_gaussians_per_stimulus=None,
 
         v1 = peaks_g1[:, s][~np.isnan(peaks_g1[:, s])]
         v2 = peaks_g2[:, s][~np.isnan(peaks_g2[:, s])]
+        a1 = amps_g1[:, s][~np.isnan(amps_g1[:, s])]
+        a2 = amps_g2[:, s][~np.isnan(amps_g2[:, s])]
 
         row = {'stimulus': s, 'stim_label': stim_name,
                'n1': len(v1), 'n2': len(v2)}
 
         if len(v1) < 2 or len(v2) < 2:
-            row.update({f'mean_{group1_label}': np.nan, f'sem_{group1_label}': np.nan,
-                        f'mean_{group2_label}': np.nan, f'sem_{group2_label}': np.nan,
-                        'mwu_stat': np.nan, 'mwu_p': np.nan,
-                        'ttest_stat': np.nan, 'ttest_p': np.nan})
+            row.update({
+                f'mean_pos_{group1_label}': np.nan, f'sem_pos_{group1_label}': np.nan,
+                f'mean_pos_{group2_label}': np.nan, f'sem_pos_{group2_label}': np.nan,
+                'pos_mwu_stat': np.nan, 'pos_mwu_p': np.nan,
+                'pos_ttest_stat': np.nan, 'pos_ttest_p': np.nan,
+                f'mean_amp_{group1_label}': np.nan, f'sem_amp_{group1_label}': np.nan,
+                f'mean_amp_{group2_label}': np.nan, f'sem_amp_{group2_label}': np.nan,
+                'amp_mwu_stat': np.nan, 'amp_mwu_p': np.nan,
+                'amp_ttest_stat': np.nan, 'amp_ttest_p': np.nan,
+            })
             rows.append(row)
             continue
 
-        mwu_stat, mwu_p = mannwhitneyu(v1, v2, alternative='two-sided')
-        tstat, tp = ttest_ind(v1, v2, equal_var=False)
-        sig = ('***' if mwu_p < 0.001 else
-               '**' if mwu_p < 0.01 else
-               '*' if mwu_p < 0.05 else 'ns')
+        # Position statistics
+        pos_mwu_stat, pos_mwu_p = mannwhitneyu(v1, v2, alternative='two-sided')
+        pos_tstat, pos_tp = ttest_ind(v1, v2, equal_var=False)
+        pos_sig = ('***' if pos_mwu_p < 0.001 else '**' if pos_mwu_p < 0.01
+        else '*' if pos_mwu_p < 0.05 else 'ns')
 
-        print(f"  {stim_name}: {group1_label} μ={np.mean(v1):.1f}°  "
+        # Amplitude statistics
+        amp_mwu_stat, amp_mwu_p = mannwhitneyu(a1, a2, alternative='two-sided')
+        amp_tstat, amp_tp = ttest_ind(a1, a2, equal_var=False)
+        amp_sig = ('***' if amp_mwu_p < 0.001 else '**' if amp_mwu_p < 0.01
+        else '*' if amp_mwu_p < 0.05 else 'ns')
+
+        print(f"  {stim_name}:")
+        print(f"    Position — {group1_label} μ={np.mean(v1):.1f}°  "
               f"{group2_label} μ={np.mean(v2):.1f}°  "
-              f"MWU p={mwu_p:.4f} {sig}  Welch p={tp:.4f}")
+              f"MWU p={pos_mwu_p:.4f} {pos_sig}  Welch p={pos_tp:.4f}")
+        print(f"    Amplitude — {group1_label} μ={np.mean(a1):.4f}  "
+              f"{group2_label} μ={np.mean(a2):.4f}  "
+              f"MWU p={amp_mwu_p:.4f} {amp_sig}  Welch p={amp_tp:.4f}")
 
         row.update({
-            f'mean_{group1_label}': np.mean(v1),
-            f'sem_{group1_label}': sem(v1),
-            f'mean_{group2_label}': np.mean(v2),
-            f'sem_{group2_label}': sem(v2),
-            'mwu_stat': mwu_stat, 'mwu_p': mwu_p,
-            'ttest_stat': tstat, 'ttest_p': tp,
+            f'mean_pos_{group1_label}': np.mean(v1),
+            f'sem_pos_{group1_label}': sem(v1),
+            f'mean_pos_{group2_label}': np.mean(v2),
+            f'sem_pos_{group2_label}': sem(v2),
+            'pos_mwu_stat': pos_mwu_stat, 'pos_mwu_p': pos_mwu_p,
+            'pos_ttest_stat': pos_tstat, 'pos_ttest_p': pos_tp,
+            f'mean_amp_{group1_label}': np.mean(a1),
+            f'sem_amp_{group1_label}': sem(a1),
+            f'mean_amp_{group2_label}': np.mean(a2),
+            f'sem_amp_{group2_label}': sem(a2),
+            'amp_mwu_stat': amp_mwu_stat, 'amp_mwu_p': amp_mwu_p,
+            'amp_ttest_stat': amp_tstat, 'amp_ttest_p': amp_tp,
         })
         rows.append(row)
 
@@ -877,8 +915,22 @@ def runGaussianAnalysis(experiment, num_bins, n_gaussians_per_stimulus=None,
         stats_df, experiment, num_bins,
         group1_label, group2_label
     )
+    print("\n[4] Saving comparison plots...")
+    plotPeakComparison(
+        {'group1': peaks_g1, 'group2': peaks_g2},
+        stats_df, experiment, num_bins,
+        group1_label, group2_label,
+        value_key='pos', ylabel='Peak angle (°)'
+    )
+    plotPeakComparison(
+        {'group1': amps_g1, 'group2': amps_g2},
+        stats_df, experiment, num_bins,
+        group1_label, group2_label,
+        value_key='amp', ylabel='Peak amplitude (probability)',
+        filename='amplitude_comparison.pdf'
+    )
 
-    return peak_df, stats_df, {'group1': peaks_g1, 'group2': peaks_g2}
+    return peak_df, stats_df, {'group1': peaks_g1, 'group2': peaks_g2}, {'group1': amps_g1, 'group2': amps_g2}
 
 
 # ---------------------------------------------------------------------------
@@ -910,13 +962,16 @@ def fitAllStimuli(data_matrix, angles, n_gaussians_per_stimulus, p0_per_stimulus
 # ---------------------------------------------------------------------------
 
 def plotPeakComparison(fish_peaks, stats_df, experiment, num_bins,
-                       group1_label='control', group2_label='sleep'):
+                       group1_label='control', group2_label='sleep',
+                       value_key='pos', ylabel='Peak angle (°)',
+                       filename='peak_comparison.pdf'):
     save_dir = path.Path() / '..' / experiment / f'gaussian_fits_{num_bins}'
     os.makedirs(save_dir, exist_ok=True)
 
-    peaks1 = fish_peaks['group1']  # (n_fish1, n_stimuli)
-    peaks2 = fish_peaks['group2']  # (n_fish2, n_stimuli)
+    peaks1    = fish_peaks['group1']
+    peaks2    = fish_peaks['group2']
     n_stimuli = peaks1.shape[1]
+    p_col     = f'{value_key}_mwu_p'   # matches column names in stats_df
 
     fig, axes = plt.subplots(1, n_stimuli, figsize=(3 * n_stimuli, 4), sharey=True)
     if n_stimuli == 1:
@@ -936,9 +991,9 @@ def plotPeakComparison(fish_peaks, stats_df, experiment, num_bins,
         jitter1 = np.random.uniform(-0.08, 0.08, len(v1))
         jitter2 = np.random.uniform(-0.08, 0.08, len(v2))
         ax.scatter(np.zeros(len(v1)) + jitter1, v1, color='black', alpha=0.5, s=20, zorder=3)
-        ax.scatter(np.ones(len(v2)) + jitter2, v2, color='red', alpha=0.5, s=20, zorder=3)
+        ax.scatter(np.ones(len(v2))  + jitter2, v2, color='blue',  alpha=0.5, s=20, zorder=3)
 
-        for xi, (v, col) in enumerate([(v1, 'black'), (v2, 'red')]):
+        for xi, (v, col) in enumerate([(v1, 'black'), (v2, 'blue')]):
             valid = v[~np.isnan(v)]
             if len(valid) > 0:
                 ax.errorbar(xi, np.mean(valid), yerr=sem(valid),
@@ -946,8 +1001,8 @@ def plotPeakComparison(fish_peaks, stats_df, experiment, num_bins,
                             capsize=4, linewidth=1.8, zorder=4)
 
         row = stats_df[stats_df['stimulus'] == s]
-        if len(row):
-            p = row['mwu_p'].values[0]
+        if len(row) and p_col in stats_df.columns:
+            p     = row[p_col].values[0]
             label = sig_label(p)
             all_vals = np.concatenate([v1[~np.isnan(v1)], v2[~np.isnan(v2)]])
             if len(all_vals):
@@ -965,12 +1020,12 @@ def plotPeakComparison(fish_peaks, stats_df, experiment, num_bins,
         ax.axhline(0, color='grey', linewidth=0.6, linestyle='--', alpha=0.5)
         sns.despine(ax=ax, top=True, right=True)
 
-    axes[0].set_ylabel('Peak angle (°)')
-    fig.suptitle(f'Peak positions: {group1_label} vs {group2_label}', fontsize=11)
+    axes[0].set_ylabel(ylabel)
+    fig.suptitle(f'{ylabel}: {group1_label} vs {group2_label}', fontsize=11)
     fig.tight_layout()
-    fig.savefig(save_dir / 'peak_comparison.pdf', bbox_inches='tight')
+    fig.savefig(save_dir / filename, bbox_inches='tight')
     plt.close(fig)
-    print(f"  Saved peak_comparison.pdf")
+    print(f"  Saved {filename}")
 
 
 # =============================================================================
@@ -978,7 +1033,7 @@ def plotPeakComparison(fish_peaks, stats_df, experiment, num_bins,
 # =============================================================================
 
 if __name__ == '__main__':
-    experiment = 'd7_07_07_2021'
+    experiment = 'd8_07_15_2021'
     num_bins = 72
     n_gaussians_per_stimulus = [3, 2, 2, 2]
 
@@ -993,25 +1048,25 @@ if __name__ == '__main__':
     # Adjust centres and amplitudes to match what you see in your plots.
 
     p0_control = [
-        [-20, 0.03, 10, 0, 0.25, 20, 30, 0.03, 10, 0],  # stimulus 0 (lowest coherence)
-        [ 0, 0.25, 10, 25, 0.04, 50, 3],  # stimulus 1
-        [ 0, 0.20, 10, 25, 0.05, 60, 3],  # stimulus 2
-        [ 0, 0.15, 10, 45, 0.06, 60, 3],  # stimulus 3 (highest coherence)
+        [-25, 0.025, 30, 0, 0.22, 25, 20, 0.03, 30, 0],  # stimulus 0 (lowest coherence)
+        [0, 0.24, 20, 35, 0.04, 40, 2],  # stimulus 1
+        [0, 0.20, 10, 35, 0.04, 50, 2],  # stimulus 2
+        [0, 0.14, 10, 45, 0.06, 30, 3],  # stimulus 3 (highest coherence)
     ]
 
     p0_sleep = [
-        [-30, 0.03, 10, 0, 0.25, 20, 30, 0.03, 10, 0],  # stimulus 0
-        [ 0, 0.25, 10, 50, 0.03, 70, 3],  # stimulus 1
-        [ 0, 0.20, 10, 60, 0.05, 70, 3],  # stimulus 2
-        [ 0, 0.10, 10, 65, 0.04, 50, 3],  # stimulus 3
+        [-25, 0.025, 30, 0, 0.22, 20, 25, 0.03, 30, 0],  # stimulus 0
+        [0, 0.24, 20, 40, 0.05, 40, 2],  # stimulus 1
+        [0, 0.18, 10, 45, 0.05, 35, 2],  # stimulus 2
+        [0, 0.12, 10, 50, 0.08, 30, 3],  # stimulus 3
     ]
 
-    peak_df, stats_df, fish_peaks = runGaussianAnalysis(
+    peak_df, stats_df, fish_peaks, fish_amps = runGaussianAnalysis(
         experiment, num_bins,
         n_gaussians_per_stimulus = n_gaussians_per_stimulus,  # one value per mirrored stimulus
         group1_label='control',
         group2_label='sleep',
-        peak_index='all',  # 0=left/indirect  1=forward  2=right/correct
+        peak_index=2,  # 0=left/incorrect  1=forward  2=right/correct   all= mean of all peaks
         p0_group1=p0_control,
         p0_group2=p0_sleep,
         prob=True,  # work on probability (0–1), not raw bpm

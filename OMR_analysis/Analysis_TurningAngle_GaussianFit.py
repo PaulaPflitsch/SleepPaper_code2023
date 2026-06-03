@@ -216,7 +216,7 @@ def plotHistogram(experiment, num_bins, prob=False):
         f, ax = plt.subplots()
 
         ax.plot(angles, data_1[stimulus], label='control', color='black')
-        ax.plot(angles, data_2[stimulus], label='light pulses morning', color='blue')
+        ax.plot(angles, data_2[stimulus], label='6h light', color='blue')
 
         plt.fill_between(angles, \
                          data_1[stimulus] - sem_1[stimulus], \
@@ -269,7 +269,7 @@ def plotHistogram(experiment, num_bins, prob=False):
         f, ax = plt.subplots()
 
         ax.plot(angles, data_1[stimulus], label='control', color='black')
-        ax.plot(angles, data_2[stimulus], label='light pulses morning', color='blue')
+        ax.plot(angles, data_2[stimulus], label='6h light', color='blue')
 
         plt.fill_between(angles, \
                          data_1[stimulus] - sem_1[stimulus], \
@@ -1035,7 +1035,7 @@ def plotPeakComparison(fish_peaks, stats_df, experiment, num_bins,
 if __name__ == '__main__':
     experiment = 'd8_07_15_2021'
     num_bins = 72
-    n_gaussians_per_stimulus = [3, 2, 2, 2]
+    n_gaussians_per_stimulus = [2, 2, 2, 2]
 
     # -- Original pipeline (unchanged) ---------------------------------------
     main(experiment, num_bins)
@@ -1048,14 +1048,14 @@ if __name__ == '__main__':
     # Adjust centres and amplitudes to match what you see in your plots.
 
     p0_control = [
-        [-25, 0.025, 30, 0, 0.22, 25, 20, 0.03, 30, 0],  # stimulus 0 (lowest coherence)
+        [0, 0.22, 25, 0, 0.03, 80, 0],  # stimulus 0 (lowest coherence)
         [0, 0.24, 20, 35, 0.04, 40, 2],  # stimulus 1
         [0, 0.20, 10, 35, 0.04, 50, 2],  # stimulus 2
         [0, 0.14, 10, 45, 0.06, 30, 3],  # stimulus 3 (highest coherence)
     ]
 
     p0_sleep = [
-        [-25, 0.025, 30, 0, 0.22, 20, 25, 0.03, 30, 0],  # stimulus 0
+        [0, 0.22, 20, 0, 0.03, 80, 0],  # stimulus 0
         [0, 0.24, 20, 40, 0.05, 40, 2],  # stimulus 1
         [0, 0.18, 10, 45, 0.05, 35, 2],  # stimulus 2
         [0, 0.12, 10, 50, 0.08, 30, 3],  # stimulus 3

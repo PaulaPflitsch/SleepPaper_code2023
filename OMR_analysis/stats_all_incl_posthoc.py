@@ -28,21 +28,54 @@ from dfply import *
 
 
 def makeDf(data_1, data_2, stimuli, rename):
-
     if stimuli % 2 == 0:
 
         half = stimuli // 2
 
-        data_1 = (data_1[:,:half] + data_1[:,half:]) / 2.0
-        data_2 = (data_2[:,:half] + data_2[:,half:]) / 2.0
-        
+        data_1 = (data_1[:, :half] + data_1[:, half:]) / 2.0
+        data_2 = (data_2[:, :half] + data_2[:, half:]) / 2.0
+
     else:
 
         half = (stimuli - 1) // 2
 
+        data_1 = (data_1[:, :half] + data_1[:, half:-1]) / 2.0
+        data_2 = (data_2[:, :half] + data_2[:, half:-1]) / 2.0
+
+    stacked = np.concatenate((data_1, data_2), axis=0)
+    col_names = [str(i) for i in range(stacked.shape[1])]
+
+    df_temp = pd.DataFrame(stacked, columns=col_names)
+    df_temp['Group'] = np.concatenate(([1] * data_1.shape[0], [2] * data_2.shape[0]))
+    df_temp['ID'] = np.concatenate((np.arange(data_1.shape[0]), np.arange(data_2.shape[0])))
+
+    df_data = df_temp.melt(id_vars=['Group', 'ID'], value_vars=col_names,
+                           var_name='Stimulus', value_name=rename)
+
+    # Paula: add new_ID column to identify fish based on stimulus value (indicating that the same fish has values for all stimuli)
+    fish_list = range(0, 64)
+    print(len(fish_list))
+    print(len(df_data))
+    n = 4
+    repeated_list = []
+    for _ in range(n):
+        repeated_list.extend(fish_list)
+    # print(repeated_list)
+    df_data["New_ID"] = repeated_list
+    # print(df_data)
+
+    return df_data
+
+def makeDf_2stim(data_1, data_2, stimuli, rename):
+
+    if stimuli % 2 == 0:
+        half = stimuli // 2
+        data_1 = (data_1[:,:half] + data_1[:,half:]) / 2.0
+        data_2 = (data_2[:,:half] + data_2[:,half:]) / 2.0
+    else:
+        half = (stimuli - 1) // 2
         data_1 = (data_1[:,:half] + data_1[:,half:-1]) / 2.0
         data_2 = (data_2[:,:half] + data_2[:,half:-1]) / 2.0
-
 
     stacked = np.concatenate((data_1, data_2), axis=0)
     col_names = [str(i) for i in range(stacked.shape[1])]
@@ -54,20 +87,14 @@ def makeDf(data_1, data_2, stimuli, rename):
     df_data = df_temp.melt(id_vars=['Group', 'ID'], value_vars=col_names,
         var_name='Stimulus', value_name=rename)
 
-    #Paula: add new_ID column to identify fish based on stimulus value (indicating that the same fish has values for all stimuli)
-    fish_list = range(0,64)
-    print(len(fish_list))
-    print(len(df_data))
-    n = 4
-    repeated_list = []
-    for _ in range(n):
-        repeated_list.extend(fish_list)
-    #print(repeated_list)
-    df_data["New_ID"]=repeated_list
-    #print(df_data)
+    # Assign New_ID directly from Group and ID columns — no tile/ordering issues
+    df_data['New_ID'] = np.where(
+        df_data['Group'] == 1,
+        df_data['ID'],
+        df_data['ID'] + data_1.shape[0]  # offset group 2 to avoid overlap
+    )
 
     return df_data
-
 def totalBout(dpath, stimuli):
 
     tmp = hdf.loadmat(dpath / 'data_72.mat')
@@ -153,6 +180,7 @@ def correctness(dpath, stimuli):
     tmp = hdf.loadmat(dpath / 'data_correctness_72.mat')
     data_1 = tmp['correct_1_raw']
     data_2 = tmp['correct_2_raw']
+    print(data_1)
 
     df_data = makeDf(data_1, data_2, stimuli, 'Correctness')
     save_dir = path.Path() / '..' / experiment
@@ -165,14 +193,14 @@ def correctness(dpath, stimuli):
     #doc_name = save_dir / 'correct_stats.xlsx'
     #results.to_excel(doc_name, index=False)
 
-    # mixed ANOVA (between and within for tests between different subjects who underwent several timepoints/condiitons)
+    # mixed ANOVA (between and within for tests between different subjects who underwent several timepoints/conditions)
     results_mix = pg.mixed_anova(data=df_data, dv='Correctness', between='Group', within='Stimulus', subject='New_ID')
     save_dir = path.Path() / '..' / experiment
     doc_name = save_dir / 'correct_stats_mixed_anova.xlsx'
     results_mix.to_excel(doc_name, index=False)
 
 
-    # # ad hoc t-test for paired samples between groups
+    # # post hoc t-test for paired samples between groups
     a = df_data.query('Group==1')['Correctness']
     # print("a",a)
     b = df_data.query('Group==2')['Correctness']
@@ -261,11 +289,13 @@ def time(dpath):
     # post hoc t-test for independent samples or related samples
     #print(df_data)
     a = data_1_mean
+    print(len(a))
     b = data_2_mean
+    print(len(b))
     # for independent samples
-    #t_test = ss.ttest_ind(a, b)
+    t_test = ss.ttest_ind(a, b)
     # for related samples
-    t_test = ss.ttest_rel(a, b)
+    #t_test = ss.ttest_rel(a, b)
     print(t_test)
 
 
@@ -405,12 +435,93 @@ def wrong_turns(dpath):
 
     return 0
 
+def bout_distance(dpath, stimuli):
+    tmp = hdf.loadmat(dpath / 'bout_data_50.mat')
+    #print(tmp)
+    bdist_1 = tmp['raw_bdist_1']
+    #print(bdist_1)
+    bdist_2 = tmp['raw_bdist_2']
+
+    # Paula try:
+    mean_bdist_1 = np.nanmean(bdist_1, axis=2)  # axis 2 is stimulus?!
+    print("bdist1:",len(mean_bdist_1))
+    mean_bdist_2 = np.nanmean(bdist_2, axis=2)
+    print("bdist2:",len(mean_bdist_2))
+
+    df_data = makeDf_2stim(mean_bdist_1, mean_bdist_2, stimuli, 'bdist')
+    print("df data: ",df_data)
+    print("Unique stimuli",df_data['Stimulus'].unique())
+
+    # find error source
+    print("NaNs in df_data:\n", df_data.isnull().sum())
+    print("Rows per subject x stimulus:")
+    print(df_data.groupby(['New_ID', 'Stimulus']).size().unstack(fill_value=0))
+    print("Expected stimuli per subject:", df_data['Stimulus'].nunique())
+    print("Subjects missing any stimulus:")
+    counts = df_data.groupby('New_ID')['Stimulus'].nunique()
+    print(counts[counts < df_data['Stimulus'].nunique()])
+
+    bout_loc = df_data.loc[df_data['Stimulus'] == '0']
+    sleep = bout_loc.loc[bout_loc['Group'] == 2]
+    control = bout_loc.loc[bout_loc['Group'] == 1]
+    # stats_bout = ss.ttest_ind(sleep.Frequency, control.Frequency, equal_var=False)
+
+    sns.boxplot(x='Stimulus', y='bdist', hue='Group', data=df_data, palette='Set3')
+
+    # for paired samples
+    # results = pg.rm_anova(dv='bdist', within=['Stimulus', 'Group'], subject='ID', data=df_data, detailed=True)
+    # save_dir = path.Path() / '..' / experiment
+    # doc_name = save_dir / 'bdist_stats.xlsx'
+    # results.to_excel(doc_name, index=False)
+
+    # mixed ANOVA (between and within for tests between different subjects who underwent several timepoints/conditions)
+    results_mix = pg.mixed_anova(data=df_data, dv='bdist', between='Group', within='Stimulus', subject='New_ID')
+    save_dir = path.Path() / '..' / experiment
+    doc_name = save_dir / 'bdist_stats_mixed_anova.xlsx'
+    results_mix.to_excel(doc_name, index=False)
+
+    # Paula: posthoc t-test with scikit-posthoc
+    # print("df_data",df_data.head())
+    # for different stimuli
+    df_stim_0 = df_data[df_data.Stimulus == "0"]  # replace number in "" for all stimuli (0-3)
+    print("df_stim", df_stim_0)
+    df_stim_1 = df_data[df_data.Stimulus == "1"]
+    df_stim_2 = df_data[df_data.Stimulus == "2"]
+    df_stim_3 = df_data[df_data.Stimulus == "3"]
+
+    # posthoc tukey hsd
+    posthoc_0 = pairwise_tukeyhsd(endog=df_stim_0['bdist'], groups=df_stim_0['Group'], alpha=0.05)
+    print("posthoc Frequency", posthoc_0)
+    posthoc_1 = pairwise_tukeyhsd(endog=df_stim_1['bdist'], groups=df_stim_1['Group'], alpha=0.05)
+    posthoc_2 = pairwise_tukeyhsd(endog=df_stim_2['bdist'], groups=df_stim_2['Group'], alpha=0.05)
+    posthoc_3 = pairwise_tukeyhsd(endog=df_stim_3['bdist'], groups=df_stim_3['Group'], alpha=0.05)
+
+    # results in dataframe
+    df_freq_0 = pd.DataFrame(data=posthoc_0._results_table.data[1:], columns=posthoc_0._results_table.data[0])
+    df_freq_1 = pd.DataFrame(data=posthoc_1._results_table.data[1:], columns=posthoc_1._results_table.data[0])
+    df_freq_2 = pd.DataFrame(data=posthoc_2._results_table.data[1:], columns=posthoc_2._results_table.data[0])
+    df_freq_3 = pd.DataFrame(data=posthoc_3._results_table.data[1:], columns=posthoc_3._results_table.data[0])
+
+    # Save in excel sheet
+    # Create a Pandas Excel writer using XlsxWriter as the engine.
+    writer = pd.ExcelWriter(save_dir / 'bdist_posthoc_tukeyhsd.xlsx', engine='xlsxwriter')
+
+    # Write each dataframe to a different worksheet.
+    df_freq_0.to_excel(writer, sheet_name='Stimuli 0%')
+    df_freq_1.to_excel(writer, sheet_name='Stimuli 25%')
+    df_freq_2.to_excel(writer, sheet_name='Stimuli 50%')
+    df_freq_3.to_excel(writer, sheet_name='Stimuli 100%')
+
+    # Close the Pandas Excel writer and output the Excel file.
+    writer.close()
+
+    return 0
 
 
 
 if __name__ == '__main__':
 
-    experiment = 'd7_07_07_2021'
+    experiment = 'd7_07_14_2021'
     stimuli = 8
 
     dpath = path.Path() / '..' / experiment
@@ -420,6 +531,7 @@ if __name__ == '__main__':
     #time(dpath)
     #IBI(dpath, stimuli)
     #exploration(dpath)
-    wrong_turns(dpath)
+    #wrong_turns(dpath)
+    bout_distance(dpath, stimuli)
 
     sys.exit()

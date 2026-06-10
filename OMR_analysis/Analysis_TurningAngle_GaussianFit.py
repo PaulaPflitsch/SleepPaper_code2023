@@ -216,7 +216,7 @@ def plotHistogram(experiment, num_bins, prob=False):
         f, ax = plt.subplots()
 
         ax.plot(angles, data_1[stimulus], label='control', color='black')
-        ax.plot(angles, data_2[stimulus], label='6h light', color='blue')
+        ax.plot(angles, data_2[stimulus], label='5 µg/ml cortisol', color='purple')
 
         plt.fill_between(angles, \
                          data_1[stimulus] - sem_1[stimulus], \
@@ -226,7 +226,7 @@ def plotHistogram(experiment, num_bins, prob=False):
         plt.fill_between(angles, \
                          data_2[stimulus] - sem_2[stimulus], \
                          data_2[stimulus] + sem_2[stimulus], \
-                         color='blue', alpha=0.5)
+                         color='purple', alpha=0.5)
 
         ax.set_xlabel(f'$\\Delta$ Angle (°)')
         if prob == 1:
@@ -269,7 +269,7 @@ def plotHistogram(experiment, num_bins, prob=False):
         f, ax = plt.subplots()
 
         ax.plot(angles, data_1[stimulus], label='control', color='black')
-        ax.plot(angles, data_2[stimulus], label='6h light', color='blue')
+        ax.plot(angles, data_2[stimulus], label='', color='purple')
 
         plt.fill_between(angles, \
                          data_1[stimulus] - sem_1[stimulus], \
@@ -279,7 +279,7 @@ def plotHistogram(experiment, num_bins, prob=False):
         plt.fill_between(angles, \
                          data_2[stimulus] - sem_2[stimulus], \
                          data_2[stimulus] + sem_2[stimulus], \
-                         color='blue', alpha=0.5)
+                         color='purple', alpha=0.5)
 
         ax.set_xlabel(f'$\\Delta$ Angle (°)')
         if prob == 1:
@@ -783,13 +783,13 @@ def runGaussianAnalysis(experiment, num_bins, n_gaussians_per_stimulus=None,
                         mean_g1[s] - sem_g1[s],
                         mean_g1[s] + sem_g1[s],
                         color='grey', alpha=0.35)
-        ax.plot(angles, mean_g2[s], color='blue', label=group2_label, linewidth=1.2)
+        ax.plot(angles, mean_g2[s], color='purple', label=group2_label, linewidth=1.2)
         ax.fill_between(angles,
                         mean_g2[s] - sem_g2[s],
                         mean_g2[s] + sem_g2[s],
-                        color='blue', alpha=0.25)
+                        color='purple', alpha=0.25)
 
-        for r, col in [(r1, 'black'), (r2, 'blue')]:
+        for r, col in [(r1, 'black'), (r2, 'purple')]:
             if r['success']:
                 ax.plot(angles, r['fit'], color=col, linestyle='--',
                         linewidth=1.5, label=f'fit {col}')
@@ -805,7 +805,7 @@ def runGaussianAnalysis(experiment, num_bins, n_gaussians_per_stimulus=None,
         ax.set_ylabel(ylabel)
         ax.set_title(f'{stim_name} — {n_gaussians_per_stimulus}G fit, Bin: 5°')
         ax.legend(fontsize=8)
-        ax.set_ylim(0,0.35)
+        ax.set_ylim(0,0.30)
         sns.despine(top=True, right=True)
         fig.savefig(save_dir / f'fig_{s}_{stim_name}_gaussfit.pdf', bbox_inches='tight')
         plt.close(fig)
@@ -820,8 +820,8 @@ def runGaussianAnalysis(experiment, num_bins, n_gaussians_per_stimulus=None,
                     })
 
     peak_df = pd.DataFrame(all_peak_info)
-    peak_df.to_csv(save_dir / 'peak_summary_means.csv', index=False)
-    print(f"  Saved peak_summary_means.csv")
+    peak_df.to_excel(save_dir / 'peak_summary_means.xlsx', index=False)
+    print(f"  Saved peak_summary_means.xlsx")
 
     # ------------------------------------------------------------------
     # 4. Per-fish fitting:
@@ -903,8 +903,8 @@ def runGaussianAnalysis(experiment, num_bins, n_gaussians_per_stimulus=None,
         rows.append(row)
 
     stats_df = pd.DataFrame(rows)
-    stats_df.to_csv(save_dir / 'peak_stats.csv', index=False)
-    print(f"  Saved peak_stats.csv")
+    stats_df.to_excel(save_dir / 'peak_stats.xlsx', index=False)
+    print(f"  Saved peak_stats.xlsx")
 
     # ------------------------------------------------------------------
     # 6. Comparison plot
@@ -991,9 +991,9 @@ def plotPeakComparison(fish_peaks, stats_df, experiment, num_bins,
         jitter1 = np.random.uniform(-0.08, 0.08, len(v1))
         jitter2 = np.random.uniform(-0.08, 0.08, len(v2))
         ax.scatter(np.zeros(len(v1)) + jitter1, v1, color='black', alpha=0.5, s=20, zorder=3)
-        ax.scatter(np.ones(len(v2))  + jitter2, v2, color='blue',  alpha=0.5, s=20, zorder=3)
+        ax.scatter(np.ones(len(v2))  + jitter2, v2, color='purple',  alpha=0.5, s=20, zorder=3)
 
-        for xi, (v, col) in enumerate([(v1, 'black'), (v2, 'blue')]):
+        for xi, (v, col) in enumerate([(v1, 'black'), (v2, 'purple')]):
             valid = v[~np.isnan(v)]
             if len(valid) > 0:
                 ax.errorbar(xi, np.mean(valid), yerr=sem(valid),
@@ -1033,7 +1033,7 @@ def plotPeakComparison(fish_peaks, stats_df, experiment, num_bins,
 # =============================================================================
 
 if __name__ == '__main__':
-    experiment = 'd8_07_15_2021'
+    experiment = '12_08_2022_5ugml_cortisol'
     num_bins = 72
     n_gaussians_per_stimulus = [2, 2, 2, 2]
 
@@ -1048,17 +1048,19 @@ if __name__ == '__main__':
     # Adjust centres and amplitudes to match what you see in your plots.
 
     p0_control = [
-        [0, 0.22, 25, 0, 0.03, 80, 0],  # stimulus 0 (lowest coherence)
-        [0, 0.24, 20, 35, 0.04, 40, 2],  # stimulus 1
-        [0, 0.20, 10, 35, 0.04, 50, 2],  # stimulus 2
-        [0, 0.14, 10, 45, 0.06, 30, 3],  # stimulus 3 (highest coherence)
+        #[-20, 0.02, 30, 0, 0.28, 20, 45, 0.02, 80, 0],  # stimulus 0 (lowest coherence)
+        [0, 0.24, 20, 0, 0.02, 80, 0],  # stimulus 0 (lowest coherence)
+        [0, 0.28, 20, 40, 0.03, 60, 1],  # stimulus 1
+        [0, 0.25, 20, 45, 0.04, 50, 3],  # stimulus 2
+        [0, 0.14, 20, 53, 0.08, 30, 3],  # stimulus 3 (highest coherence)
     ]
 
     p0_sleep = [
-        [0, 0.22, 20, 0, 0.03, 80, 0],  # stimulus 0
-        [0, 0.24, 20, 40, 0.05, 40, 2],  # stimulus 1
-        [0, 0.18, 10, 45, 0.05, 35, 2],  # stimulus 2
-        [0, 0.12, 10, 50, 0.08, 30, 3],  # stimulus 3
+        #[-30, 0.01, 50, 0, 0.30, 20, 50, 0.01, 80, 0],  # stimulus 0
+        [0, 0.25, 20, 0, 0.02, 80, 0],  # stimulus 0 (lowest coherence)
+        [0, 0.28, 20, 40, 0.025, 60, 1],  # stimulus 1
+        [0, 0.25, 20, 48, 0.04, 40, 3],  # stimulus 2
+        [0, 0.15, 20, 55, 0.08, 30, 3],  # stimulus 3
     ]
 
     peak_df, stats_df, fish_peaks, fish_amps = runGaussianAnalysis(
